@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { entriesApi, cycleApi } from '../api';
 import type { DiaryEntry, CycleInfo } from '../types';
 import { MOOD_EMOJI, PHASE_NAMES, PHASE_COLORS, STICKER_EMOJI } from '../types';
+import { formatLocalDate, todayStr } from '../utils/date';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -15,11 +16,11 @@ export default function CalendarPage() {
   const [selectedEntry, setSelectedEntry] = useState<DiaryEntry | null>(null);
 
   const { start, end } = useMemo(() => {
-    const s = new Date(year, month, 1);
-    const e = new Date(year, month + 1, 0);
+    const s = new Date(year, month, 1, 12, 0, 0);
+    const e = new Date(year, month + 1, 0, 12, 0, 0);
     return {
-      start: s.toISOString().split('T')[0],
-      end: e.toISOString().split('T')[0],
+      start: formatLocalDate(s),
+      end: formatLocalDate(e),
     };
   }, [year, month]);
 
@@ -90,11 +91,11 @@ export default function CalendarPage() {
     const n = new Date();
     setYear(n.getFullYear());
     setMonth(n.getMonth());
-    setSelectedDate(n.toISOString().split('T')[0]);
+    setSelectedDate(todayStr());
   }
 
   const days = getDaysToRender();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   const entriesByDate = useMemo(() => {
     const map: Record<string, DiaryEntry> = {};
     entries.forEach(e => { map[e.date] = e; });
@@ -127,9 +128,9 @@ export default function CalendarPage() {
               <div key={w} className="calendar-weekday">{w}</div>
             ))}
             {days.map(({ date, inMonth }) => {
-              const dateStr = date.toISOString().split('T')[0];
+              const dateStr = formatLocalDate(date);
               const entry = entriesByDate[dateStr];
-              const isToday = dateStr === todayStr;
+              const isToday = dateStr === today;
               const isSelected = dateStr === selectedDate;
               return (
                 <div

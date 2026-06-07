@@ -1,39 +1,45 @@
+import fs from 'fs';
+import path from 'path';
 import { DiaryEntry, CycleInfo } from './types';
 import { getDefaultCycleInfo } from './utils/cycle';
 
-const STORAGE_KEY = 'mood_journal_data';
-const CYCLE_KEY = 'mood_journal_cycle';
+const DATA_DIR = path.join(process.cwd(), 'data');
+const ENTRIES_FILE = path.join(DATA_DIR, 'entries.json');
+const CYCLE_FILE = path.join(DATA_DIR, 'cycle.json');
 
-interface StorageData {
-  entries: DiaryEntry[];
+function ensureDataDir(): void {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
 }
 
-function readStorage(): StorageData {
+function readJSONFile<T>(filePath: string, defaultValue: T): T {
+  ensureDataDir();
   try {
-    const data = process.env[STORAGE_KEY];
-    if (data) {
-      return JSON.parse(data);
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(content) as T;
     }
-  } catch (e) {}
-  return { entries: generateSampleData() };
+  } catch (e) {
+    console.error(`Error reading ${filePath}:`, e);
+  }
+  return defaultValue;
 }
 
-function writeStorage(data: StorageData): void {
-  process.env[STORAGE_KEY] = JSON.stringify(data);
-}
-
-function readCycleInfo(): CycleInfo {
+function writeJSONFile<T>(filePath: string, data: T): void {
+  ensureDataDir();
   try {
-    const data = process.env[CYCLE_KEY];
-    if (data) {
-      return JSON.parse(data);
-    }
-  } catch (e) {}
-  return getDefaultCycleInfo();
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error(`Error writing ${filePath}:`, e);
+  }
 }
 
-function writeCycleInfo(info: CycleInfo): void {
-  process.env[CYCLE_KEY] = JSON.stringify(info);
+function formatLocalDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function generateSampleData(): DiaryEntry[] {
@@ -50,7 +56,7 @@ function generateSampleData(): DiaryEntry[] {
   for (let i = 364; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatLocalDate(date);
 
     if (Math.random() < 0.75) {
       const moodScore = moods[Math.floor(Math.random() * moods.length)];
@@ -99,77 +105,99 @@ function getRandomEventTitle(): string {
   return events[Math.floor(Math.random() * events.length)];
 }
 
+function readEntries(): DiaryEntry[] {
+  const defaultValue = { entries: generateSampleData() };
+  const data = readJSONFile<{ entries: DiaryEntry[] }>(ENTRIES_FILE, defaultValue);
+  if (!fs.existsSync(ENTRIES_FILE)) {
+    writeJSONFile(ENTRIES_FILE, data);
+  }
+  return data.entries;
+}
+
+function writeEntries(entries: DiaryEntry[]): void {
+  writeJSONFile(ENTRIES_FILE, { entries });
+}
+
 export function getAllEntries(): DiaryEntry[] {
-  const data = readStorage();
-  return data.entries.sort((a, b) => b.date.localeCompare(a.date));
+  return readEntries().sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function getEntryById(id: string): DiaryEntry | undefined {
-  return readStorage().entries.find(e => e.id === id);
+  return readEntries().find(e => e.id === id);
 }
 
 export function getEntryByDate(date: string): DiaryEntry | undefined {
-  return readStorage().entries.find(e => e.date === date);
+  return readEntries().find(e => e.date === date);
 }
 
 export function getEntriesByDateRange(start: string, end: string): DiaryEntry[] {
-  return readStorage().entries.filter(e => e.date >= start && e.date <= end);
+  return readEntries().filter(e => e.date >= start && e.date <= end);
 }
 
 export function createEntry(entry: Omit<DiaryEntry, 'id' | 'createdAt' | 'updatedAt'>): DiaryEntry {
-  const data = readStorage();
+  const entries = readEntries();
   const now = new Date().toISOString();
-  const newEntry: DiaryEntry = {
-    ...entry,
-    id: `entry_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    createdAt: now,
-    updatedAt: now,
-  };
-  const existingIdx = data.entries.findIndex(e => e.date === entry.date);
+  const existingIdx = entries.findIndex(e => e.date === entry.date);
+  let newEntry: DiaryEntry;
+
   if (existingIdx >= 0) {
-    newEntry.id = data.entries[existingIdx].id;
-    newEntry.createdAt = data.entries[existingIdx].createdAt;
-    data.entries[existingIdx] = newEntry;
+    newEntry = {
+      ...entries[existingIdx],
+      ...entry,
+      updatedAt: now,
+    };
+    entries[existingIdx] = newEntry;
   } else {
-    data.entries.push(newEntry);
+    newEntry = {
+      ...entry,
+      id: `entry_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    entries.push(newEntry);
   }
-  writeStorage(data);
+  writeEntries(entries);
   return newEntry;
 }
 
 export function updateEntry(id: string, updates: Partial<DiaryEntry>): DiaryEntry | undefined {
-  const data = readStorage();
-  const idx = data.entries.findIndex(e => e.id === id);
+  const entries = readEntries();
+  const idx = entries.findIndex(e => e.id === id);
   if (idx >= 0) {
-    data.entries[idx] = {
-      ...data.entries[idx],
+    entries[idx] = {
+      ...entries[idx],
       ...updates,
       updatedAt: new Date().toISOString(),
     };
-    writeStorage(data);
-    return data.entries[idx];
+    writeEntries(entries);
+    return entries[idx];
   }
   return undefined;
 }
 
 export function deleteEntry(id: string): boolean {
-  const data = readStorage();
-  const idx = data.entries.findIndex(e => e.id === id);
+  const entries = readEntries();
+  const idx = entries.findIndex(e => e.id === id);
   if (idx >= 0) {
-    data.entries.splice(idx, 1);
-    writeStorage(data);
+    entries.splice(idx, 1);
+    writeEntries(entries);
     return true;
   }
   return false;
 }
 
 export function getCycleInfo(): CycleInfo {
-  return readCycleInfo();
+  const defaultValue = getDefaultCycleInfo();
+  const data = readJSONFile<CycleInfo>(CYCLE_FILE, defaultValue);
+  if (!fs.existsSync(CYCLE_FILE)) {
+    writeJSONFile(CYCLE_FILE, data);
+  }
+  return data;
 }
 
 export function updateCycleInfo(info: Partial<CycleInfo>): CycleInfo {
-  const current = readCycleInfo();
+  const current = getCycleInfo();
   const updated = { ...current, ...info };
-  writeCycleInfo(updated);
+  writeJSONFile(CYCLE_FILE, updated);
   return updated;
 }

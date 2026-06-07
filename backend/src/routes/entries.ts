@@ -57,16 +57,42 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'date and moodScore are required' });
   }
 
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(date)) {
+    return res.status(400).json({ error: '日期格式必须为 YYYY-MM-DD' });
+  }
+
+  const score = Number(moodScore);
+  if (!Number.isInteger(score) || score < 1 || score > 10) {
+    return res.status(400).json({ error: '心情评分必须是 1-10 的整数' });
+  }
+
+  if (visibility && visibility !== 'private' && visibility !== 'public') {
+    return res.status(400).json({ error: '可见性必须为 private 或 public' });
+  }
+
+  if (keywords && !Array.isArray(keywords)) {
+    return res.status(400).json({ error: 'keywords 必须是数组' });
+  }
+
+  if (stickers && !Array.isArray(stickers)) {
+    return res.status(400).json({ error: 'stickers 必须是数组' });
+  }
+
+  if (photos && !Array.isArray(photos)) {
+    return res.status(400).json({ error: 'photos 必须是数组' });
+  }
+
   const entry = store.createEntry({
     date,
-    moodScore: Number(moodScore),
-    keywords: keywords || [],
-    notes: notes || '',
-    photos: photos || [],
-    stickers: stickers || [],
+    moodScore: score,
+    keywords: Array.isArray(keywords) ? keywords : [],
+    notes: typeof notes === 'string' ? notes : '',
+    photos: Array.isArray(photos) ? photos : [],
+    stickers: Array.isArray(stickers) ? stickers : [],
     visibility: (visibility as Visibility) || 'private',
     isSpecialEvent: Boolean(isSpecialEvent),
-    specialEventTitle: specialEventTitle,
+    specialEventTitle: isSpecialEvent && specialEventTitle ? String(specialEventTitle) : undefined,
   });
 
   const cycleInfo = store.getCycleInfo();

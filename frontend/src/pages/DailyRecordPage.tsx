@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { entriesApi, uploadApi, cycleApi } from '../api';
 import type { DiaryEntry, StickerType, Visibility, CycleInfo } from '../types';
 import { MOOD_EMOJI, STICKER_EMOJI, PHASE_NAMES, PHASE_COLORS } from '../types';
+import { todayStr } from '../utils/date';
 
 const PRESET_KEYWORDS = [
   '开心', '平静', '焦虑', '疲惫', '充实', '失落',
@@ -17,7 +18,7 @@ const ALL_STICKERS: StickerType[] = [
 ];
 
 export default function DailyRecordPage() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   const [date, setDate] = useState(today);
   const [moodScore, setMoodScore] = useState<number>(6);
   const [keywords, setKeywords] = useState<string[]>([]);
