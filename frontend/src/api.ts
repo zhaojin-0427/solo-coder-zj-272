@@ -27,6 +27,9 @@ import type {
   ReminderRule,
   ReminderInstance,
   ReminderSummary,
+  EntrySearchFilters,
+  EntrySearchResult,
+  SearchMetadata,
 } from './types';
 
 const api = axios.create({
@@ -237,4 +240,26 @@ export const remindersApi = {
     api.get<ReminderSummary>('/reminders/summary').then(r => r.data),
   getTypeLabels: () =>
     api.get<Record<string, string>>('/reminders/type-labels').then(r => r.data),
+};
+
+export const searchApi = {
+  searchEntries: (filters: EntrySearchFilters) => {
+    const params: Record<string, any> = {};
+    if (filters.startDate) params.startDate = filters.startDate;
+    if (filters.endDate) params.endDate = filters.endDate;
+    if (filters.moodMin !== undefined) params.moodMin = filters.moodMin;
+    if (filters.moodMax !== undefined) params.moodMax = filters.moodMax;
+    if (filters.cyclePhases && filters.cyclePhases.length > 0) params.cyclePhases = filters.cyclePhases.join(',');
+    if (filters.keywords && filters.keywords.length > 0) params.keywords = filters.keywords.join(',');
+    if (filters.stickers && filters.stickers.length > 0) params.stickers = filters.stickers.join(',');
+    if (filters.visibility) params.visibility = filters.visibility;
+    if (filters.isSpecialEvent !== undefined) params.isSpecialEvent = filters.isSpecialEvent;
+    if (filters.hasPhotos !== undefined) params.hasPhotos = filters.hasPhotos;
+    if (filters.hasReminders !== undefined) params.hasReminders = filters.hasReminders;
+    if (filters.hasAlerts !== undefined) params.hasAlerts = filters.hasAlerts;
+    if (filters.keywordMatch) params.keywordMatch = filters.keywordMatch;
+    return api.get<EntrySearchResult>('/search/entries', { params }).then(r => r.data);
+  },
+  getMetadata: () =>
+    api.get<SearchMetadata>('/search/metadata').then(r => r.data),
 };

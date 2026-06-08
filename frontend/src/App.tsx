@@ -9,10 +9,12 @@ import SharingCenterPage from './pages/SharingCenterPage';
 import PublicSharePage from './pages/PublicSharePage';
 import HealingPlanPage from './pages/HealingPlanPage';
 import RemindersPage from './pages/RemindersPage';
+import SearchPage from './pages/SearchPage';
 
 const navItems = [
   { key: 'daily', label: '每日记录', path: '/' },
   { key: 'calendar', label: '月历视图', path: '/calendar' },
+  { key: 'search', label: '🔍 搜索筛选', path: '/search' },
   { key: 'stats', label: '周期统计', path: '/stats' },
   { key: 'insights', label: '🔮 洞察预警', path: '/insights' },
   { key: 'wordcloud', label: '心情词云', path: '/wordcloud' },
@@ -49,6 +51,7 @@ function MainLayout() {
         <Routes>
           <Route path="/" element={<DailyRecordPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/wordcloud" element={<WordCloudPage />} />

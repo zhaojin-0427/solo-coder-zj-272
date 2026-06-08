@@ -518,3 +518,77 @@ export const REMINDER_STATUS_LABELS: Record<ReminderStatus, string> = {
   completed: '已完成',
   ignored: '已忽略',
 };
+
+export interface EntrySearchFilters {
+  startDate?: string;
+  endDate?: string;
+  moodMin?: number;
+  moodMax?: number;
+  cyclePhases?: CyclePhase[];
+  keywords?: string[];
+  stickers?: StickerType[];
+  visibility?: Visibility;
+  isSpecialEvent?: boolean;
+  hasPhotos?: boolean;
+  hasReminders?: boolean;
+  hasAlerts?: boolean;
+  keywordMatch?: 'any' | 'all';
+}
+
+export interface EntrySearchResult {
+  entries: DiaryEntry[];
+  stats: {
+    total: number;
+    avgMood: number;
+    minMood: number;
+    maxMood: number;
+    phaseBreakdown: { phase: CyclePhase; phaseName: string; count: number }[];
+    keywordBreakdown: { keyword: string; count: number }[];
+    specialEventCount: number;
+    withPhotosCount: number;
+    withRemindersCount: number;
+    withAlertsCount: number;
+    dateRange?: { start: string; end: string };
+  };
+  appliedFilters: EntrySearchFilters;
+  dateSemantics: {
+    label: string;
+    description: string;
+  };
+}
+
+export const CYCLE_PHASE_LABELS: Record<CyclePhase, string> = {
+  menstrual: '月经期',
+  follicular: '卵泡期',
+  ovulation: '排卵期',
+  luteal: '黄体期',
+};
+
+export const VISIBILITY_LABELS: Record<Visibility, string> = {
+  private: '私密',
+  public: '公开',
+};
+
+export const ALL_STICKER_TYPES: StickerType[] = [
+  'heart', 'star', 'flower', 'sun', 'moon',
+  'cloud', 'rainbow', 'music', 'coffee', 'book',
+  'sparkle', 'leaf', 'gift', 'cat', 'ribbon'
+];
+
+export const STICKER_LABELS: Record<StickerType, string> = {
+  heart: '爱心',
+  star: '星星',
+  flower: '花朵',
+  sun: '太阳',
+  moon: '月亮',
+  cloud: '云朵',
+  rainbow: '彩虹',
+  music: '音乐',
+  coffee: '咖啡',
+  book: '书本',
+  sparkle: '闪光',
+  leaf: '叶子',
+  gift: '礼物',
+  cat: '猫咪',
+  ribbon: '丝带',
+};

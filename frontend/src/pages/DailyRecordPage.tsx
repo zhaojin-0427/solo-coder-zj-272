@@ -170,7 +170,17 @@ export default function DailyRecordPage() {
     <div className="row">
       <div className="col">
         <div className="card">
-          <h2 className="card-title">📝 今日记录</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="card-title" style={{ margin: 0 }}>📝 今日记录</h2>
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '8px 16px', fontSize: '0.9em' }}
+              onClick={() => navigate('/search')}
+            >
+              🔍 搜索筛选
+            </button>
+          </div>
+          <div style={{ height: 20 }} />
 
           <div className="form-group">
             <label>日期</label>

@@ -20,8 +20,13 @@ import {
   ReminderRule,
   ReminderInstance,
   DEFAULT_REMINDER_RULES,
+  EntrySearchFilters,
+  EntrySearchResult,
+  CyclePhase,
+  CYCLE_PHASE_LABELS,
 } from './types';
 import { getDefaultCycleInfo } from './utils/cycle';
+import { attachCyclePhases } from './utils/stats';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const ENTRIES_FILE = path.join(DATA_DIR, 'entries.json');
@@ -1142,4 +1147,154 @@ export function clearInstancesByDateRange(start: string, end: string): number {
   const removed = existing.length - remaining.length;
   writeReminderInstances(remaining);
   return removed;
+}
+
+function formatDateCN(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+function generateDateSemantics(filters: EntrySearchFilters, entries: { date: string }[]): { label: string; description: string } {
+  const dates = entries.map(e => e.date).sort();
+  if (filters.startDate && filters.endDate) {
+    return {
+      label: `${formatDateCN(filters.startDate)} 至 ${formatDateCN(filters.endDate)}`,
+      description: `筛选范围：${formatDateCN(filters.startDate)} 至 ${formatDateCN(filters.endDate)}，共 ${entries.length} 条记录的日期`,
+    };
+  } else if (filters.startDate) {
+    return {
+      label: `${formatDateCN(filters.startDate)} 起`,
+      description: `筛选范围：从 ${formatDateCN(filters.startDate)} 开始至今`,
+    };
+  } else if (filters.endDate) {
+    return {
+      label: `至 ${formatDateCN(filters.endDate)}`,
+      description: `筛选范围：截止至 ${formatDateCN(filters.endDate)}`,
+    };
+  } else if (dates.length > 0) {
+    return {
+      label: `${formatDateCN(dates[0])} 至 ${formatDateCN(dates[dates.length - 1])}`,
+      description: `全部记录范围：${formatDateCN(dates[0])} 至 ${formatDateCN(dates[dates.length - 1])}`,
+    };
+  }
+  return { label: '全部记录', description: '未设置日期范围，涵盖所有有记录的日期' };
+}
+
+export function searchEntries(filters: EntrySearchFilters): EntrySearchResult {
+  const cycleInfo = getCycleInfo();
+  let allEntries = attachCyclePhases(readEntries());
+  
+  const alertDates = new Set(getAlertDates());
+  const reminderDates = new Set(getReminderDates());
+
+  let filtered = allEntries;
+
+  if (filters.startDate) {
+    filtered = filtered.filter(e => e.date >= filters.startDate!);
+  }
+  if (filters.endDate) {
+    filtered = filtered.filter(e => e.date <= filters.endDate!);
+  }
+  if (filters.moodMin !== undefined) {
+    filtered = filtered.filter(e => e.moodScore >= filters.moodMin!);
+  }
+  if (filters.moodMax !== undefined) {
+    filtered = filtered.filter(e => e.moodScore <= filters.moodMax!);
+  }
+  if (filters.cyclePhases && filters.cyclePhases.length > 0) {
+    filtered = filtered.filter(e => e.cyclePhase && filters.cyclePhases!.includes(e.cyclePhase));
+  }
+  if (filters.keywords && filters.keywords.length > 0) {
+    const matchMode = filters.keywordMatch || 'any';
+    filtered = filtered.filter(e => {
+      if (matchMode === 'all') {
+        return filters.keywords!.every(kw => e.keywords.includes(kw));
+      }
+      return filters.keywords!.some(kw => e.keywords.includes(kw));
+    });
+  }
+  if (filters.stickers && filters.stickers.length > 0) {
+    filtered = filtered.filter(e => filters.stickers!.some(s => e.stickers.includes(s)));
+  }
+  if (filters.visibility) {
+    filtered = filtered.filter(e => e.visibility === filters.visibility);
+  }
+  if (filters.isSpecialEvent !== undefined) {
+    filtered = filtered.filter(e => e.isSpecialEvent === filters.isSpecialEvent);
+  }
+  if (filters.hasPhotos !== undefined) {
+    filtered = filtered.filter(e => filters.hasPhotos ? e.photos.length > 0 : e.photos.length === 0);
+  }
+  if (filters.hasReminders !== undefined) {
+    filtered = filtered.filter(e => filters.hasReminders ? reminderDates.has(e.date) : !reminderDates.has(e.date));
+  }
+  if (filters.hasAlerts !== undefined) {
+    filtered = filtered.filter(e => filters.hasAlerts ? alertDates.has(e.date) : !alertDates.has(e.date));
+  }
+
+  filtered = filtered.sort((a, b) => b.date.localeCompare(a.date));
+
+  const total = filtered.length;
+  const avgMood = total > 0 ? filtered.reduce((s, e) => s + e.moodScore, 0) / total : 0;
+  const minMood = total > 0 ? Math.min(...filtered.map(e => e.moodScore)) : 0;
+  const maxMood = total > 0 ? Math.max(...filtered.map(e => e.moodScore)) : 0;
+
+  const phaseMap: Record<string, number> = {};
+  const allPhases: CyclePhase[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
+  allPhases.forEach(p => { phaseMap[p] = 0; });
+  filtered.forEach(e => {
+    if (e.cyclePhase) {
+      phaseMap[e.cyclePhase] = (phaseMap[e.cyclePhase] || 0) + 1;
+    }
+  });
+  const phaseBreakdown = allPhases.map(p => ({
+    phase: p,
+    phaseName: CYCLE_PHASE_LABELS[p],
+    count: phaseMap[p] || 0,
+  }));
+
+  const kwMap: Record<string, number> = {};
+  filtered.forEach(e => {
+    e.keywords.forEach(k => {
+      kwMap[k] = (kwMap[k] || 0) + 1;
+    });
+  });
+  const keywordBreakdown = Object.entries(kwMap)
+    .map(([keyword, count]) => ({ keyword, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20);
+
+  const specialEventCount = filtered.filter(e => e.isSpecialEvent).length;
+  const withPhotosCount = filtered.filter(e => e.photos.length > 0).length;
+  const withRemindersCount = filtered.filter(e => reminderDates.has(e.date)).length;
+  const withAlertsCount = filtered.filter(e => alertDates.has(e.date)).length;
+
+  const sortedDates = filtered.map(e => ({ date: e.date }));
+  const dateSemantics = generateDateSemantics(filters, sortedDates);
+
+  const dateRange = (filters.startDate && filters.endDate) || sortedDates.length > 0
+    ? {
+        start: filters.startDate || sortedDates[0]?.date,
+        end: filters.endDate || sortedDates[sortedDates.length - 1]?.date,
+      }
+    : undefined;
+
+  return {
+    entries: filtered,
+    stats: {
+      total,
+      avgMood: Math.round(avgMood * 10) / 10,
+      minMood,
+      maxMood,
+      phaseBreakdown,
+      keywordBreakdown,
+      specialEventCount,
+      withPhotosCount,
+      withRemindersCount,
+      withAlertsCount,
+      dateRange,
+    },
+    appliedFilters: filters,
+    dateSemantics,
+  };
 }

@@ -135,6 +135,16 @@ export default function CalendarPage() {
     <div className="row">
       <div className="col" style={{ minWidth: 400 }}>
         <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 className="card-title" style={{ margin: 0 }}>📅 月历视图</h2>
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '6px 14px', fontSize: '0.85em' }}
+              onClick={() => navigate('/search')}
+            >
+              🔍 搜索筛选
+            </button>
+          </div>
           <div className="calendar-header">
             <div className="calendar-nav">
               <button onClick={prevMonth}>‹</button>

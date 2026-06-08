@@ -9,6 +9,7 @@ import insightsRouter from './routes/insights';
 import sharingRouter from './routes/sharing';
 import healingRouter from './routes/healing';
 import remindersRouter from './routes/reminders';
+import searchRouter from './routes/search';
 
 const app = express();
 const PORT = 9102;
@@ -30,6 +31,7 @@ app.use('/api/insights', insightsRouter);
 app.use('/api/sharing', sharingRouter);
 app.use('/api/healing', healingRouter);
 app.use('/api/reminders', remindersRouter);
+app.use('/api/search', searchRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 后端服务已启动: http://localhost:${PORT}`);
@@ -101,4 +103,6 @@ app.listen(PORT, () => {
   console.log(`   POST /api/reminders/refresh`);
   console.log(`   GET  /api/reminders/summary`);
   console.log(`   GET  /api/reminders/type-labels`);
+  console.log(`   GET  /api/search/entries`);
+  console.log(`   GET  /api/search/metadata`);
 });
