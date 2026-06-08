@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { entriesApi, cycleApi, insightsApi } from '../api';
-import type { DiaryEntry, CycleInfo } from '../types';
-import { MOOD_EMOJI, PHASE_NAMES, PHASE_COLORS, STICKER_EMOJI } from '../types';
+import { entriesApi, cycleApi, insightsApi, healingApi } from '../api';
+import type { DiaryEntry, CycleInfo, HealingSuggestion } from '../types';
+import { MOOD_EMOJI, PHASE_NAMES, PHASE_COLORS, STICKER_EMOJI, HEALING_CATEGORY_EMOJI, HEALING_CATEGORY_LABELS, HEALING_CATEGORY_COLORS, PRIORITY_LABELS, SUGGESTION_SOURCE_LABELS } from '../types';
 import { formatLocalDate, todayStr } from '../utils/date';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -15,6 +15,7 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<DiaryEntry | null>(null);
   const [alertDates, setAlertDates] = useState<Set<string>>(new Set());
+  const [selectedDateSuggestions, setSelectedDateSuggestions] = useState<HealingSuggestion[]>([]);
 
   const { start, end } = useMemo(() => {
     const s = new Date(year, month, 1, 12, 0, 0);
@@ -28,6 +29,16 @@ export default function CalendarPage() {
   useEffect(() => {
     loadData();
   }, [start, end]);
+
+  useEffect(() => {
+    if (selectedDate) {
+      healingApi.getTodaySuggestions(selectedDate)
+        .then(setSelectedDateSuggestions)
+        .catch(() => setSelectedDateSuggestions([]));
+    } else {
+      setSelectedDateSuggestions([]);
+    }
+  }, [selectedDate]);
 
   async function loadData() {
     try {
@@ -268,6 +279,33 @@ export default function CalendarPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {selectedDateSuggestions.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <h3 className="card-title" style={{ marginBottom: 12 }}>💚 疗愈建议</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {selectedDateSuggestions.slice(0, 3).map(s => (
+                  <div key={s.id} className="healing-mini-card">
+                    <div className="healing-mini-header">
+                      <span className="category-tag" style={{ background: HEALING_CATEGORY_COLORS[s.category] }}>
+                        {HEALING_CATEGORY_EMOJI[s.category]} {HEALING_CATEGORY_LABELS[s.category]}
+                      </span>
+                      <span className={`priority-tag priority-${s.priority}`}>
+                        {PRIORITY_LABELS[s.priority]}
+                      </span>
+                    </div>
+                    <div className="healing-mini-title">{s.title}</div>
+                    {s.description && (
+                      <div className="healing-mini-desc">{s.description}</div>
+                    )}
+                    <div className="source-tag">
+                      来源：{SUGGESTION_SOURCE_LABELS[s.source] || s.source}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -236,3 +236,194 @@ export interface EntryPrivateNote {
   note: string;
   updatedAt: string;
 }
+
+export type HealingActionCategory =
+  | 'breathing'
+  | 'sleep'
+  | 'exercise'
+  | 'diet'
+  | 'social'
+  | 'medical'
+  | 'mindfulness'
+  | 'hobby'
+  | 'other';
+
+export type HealingActionPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export type HealingActionStatus = 'pending' | 'in_progress' | 'completed' | 'skipped' | 'cancelled';
+
+export type HealingPlanStatus = 'active' | 'paused' | 'completed' | 'archived';
+
+export const HEALING_CATEGORY_LABELS: Record<HealingActionCategory, string> = {
+  breathing: '呼吸练习',
+  sleep: '睡眠改善',
+  exercise: '运动健身',
+  diet: '饮食调理',
+  social: '社交支持',
+  medical: '就医提醒',
+  mindfulness: '正念冥想',
+  hobby: '兴趣爱好',
+  other: '其他',
+};
+
+export const HEALING_CATEGORY_EMOJI: Record<HealingActionCategory, string> = {
+  breathing: '🫁',
+  sleep: '😴',
+  exercise: '🏃',
+  diet: '🥗',
+  social: '💞',
+  medical: '🏥',
+  mindfulness: '🧘',
+  hobby: '🎨',
+  other: '✨',
+};
+
+export const HEALING_CATEGORY_COLORS: Record<HealingActionCategory, string> = {
+  breathing: '#81C784',
+  sleep: '#7986CB',
+  exercise: '#FFB74D',
+  diet: '#AED581',
+  social: '#F06292',
+  medical: '#E57373',
+  mindfulness: '#9575CD',
+  hobby: '#4FC3F7',
+  other: '#A1887F',
+};
+
+export const PRIORITY_LABELS: Record<HealingActionPriority, string> = {
+  low: '低',
+  medium: '中',
+  high: '高',
+  urgent: '紧急',
+};
+
+export const PRIORITY_COLORS: Record<HealingActionPriority, string> = {
+  low: '#A1887F',
+  medium: '#FFB74D',
+  high: '#FF8A65',
+  urgent: '#E57373',
+};
+
+export const STATUS_LABELS: Record<HealingActionStatus, string> = {
+  pending: '待执行',
+  in_progress: '进行中',
+  completed: '已完成',
+  skipped: '已跳过',
+  cancelled: '已取消',
+};
+
+export const PLAN_STATUS_LABELS: Record<HealingPlanStatus, string> = {
+  active: '进行中',
+  paused: '已暂停',
+  completed: '已完成',
+  archived: '已归档',
+};
+
+export interface HealingActionTrigger {
+  cyclePhases?: CyclePhase[];
+  moodThreshold?: {
+    min?: number;
+    max?: number;
+  };
+  keywords?: string[];
+  daysOfWeek?: number[];
+}
+
+export interface HealingAction {
+  id: string;
+  planId: string;
+  title: string;
+  description?: string;
+  category: HealingActionCategory;
+  priority: HealingActionPriority;
+  status: HealingActionStatus;
+  trigger?: HealingActionTrigger;
+  reminderDate?: string;
+  dueDate?: string;
+  completedAt?: string;
+  linkedEntryId?: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HealingCompletionRecord {
+  id: string;
+  actionId: string;
+  planId: string;
+  date: string;
+  completed: boolean;
+  moodBefore?: number;
+  moodAfter?: number;
+  durationMinutes?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface HealingReviewNote {
+  id: string;
+  actionId?: string;
+  planId: string;
+  entryId?: string;
+  date: string;
+  content: string;
+  moodScore?: number;
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HealingPlan {
+  id: string;
+  title: string;
+  description?: string;
+  status: HealingPlanStatus;
+  startDate: string;
+  endDate: string;
+  generatedAt?: string;
+  generatedFrom?: 'manual' | 'auto_30d' | 'auto_90d';
+  generationParams?: {
+    windowDays: number;
+    avgMood: number;
+    topKeywords: string[];
+    alertTypes: string[];
+    dominantPhase?: CyclePhase;
+    specialEventsCount: number;
+    feedbackThemes: string[];
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HealingPlanWithStats extends HealingPlan {
+  totalActions: number;
+  completedActions: number;
+  completionRate: number;
+  inProgressActions: number;
+  pendingActions: number;
+}
+
+export interface HealingSuggestion {
+  id: string;
+  date: string;
+  planId?: string;
+  actionId?: string;
+  title: string;
+  description: string;
+  category: HealingActionCategory;
+  priority: HealingActionPriority;
+  reason: string;
+  source: 'phase' | 'mood' | 'keyword' | 'alert' | 'event' | 'feedback' | 'routine';
+  createdAt: string;
+}
+
+export interface HealingProgressStats {
+  planId: string;
+  totalActions: number;
+  completedActions: number;
+  completionRate: number;
+  byCategory: Record<HealingActionCategory, { total: number; completed: number }>;
+  byPriority: Record<HealingActionPriority, { total: number; completed: number }>;
+  weeklyTrend: { week: string; completed: number; total: number }[];
+  moodCorrelation: { completionRate: number; avgMood: number }[];
+}

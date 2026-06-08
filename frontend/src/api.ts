@@ -17,6 +17,13 @@ import type {
   EntryPrivateNote,
   ShareSpaceDetail,
   PublicShareData,
+  HealingPlan,
+  HealingPlanWithStats,
+  HealingAction,
+  HealingCompletionRecord,
+  HealingReviewNote,
+  HealingSuggestion,
+  HealingProgressStats,
 } from './types';
 
 const api = axios.create({
@@ -133,4 +140,59 @@ export const sharingApi = {
     api.get<PublicShareData>(`/sharing/public/${token}`).then(r => r.data),
   submitFeedback: (token: string, visitorName: string, message: string) =>
     api.post<ShareFeedback>(`/sharing/public/${token}/feedback`, { visitorName, message }).then(r => r.data),
+};
+
+export const healingApi = {
+  getPlans: () =>
+    api.get<HealingPlanWithStats[]>('/healing/plans').then(r => r.data),
+  getActivePlans: () =>
+    api.get<HealingPlanWithStats[]>('/healing/plans/active').then(r => r.data),
+  getPlanDetail: (id: string) =>
+    api.get<{ plan: HealingPlan; actions: HealingAction[]; stats: HealingProgressStats }>(`/healing/plans/${id}`).then(r => r.data),
+  generatePlan: (windowDays: 30 | 90 = 30) =>
+    api.post<{ plan: HealingPlan; actions: HealingAction[] }>('/healing/plans/generate', { windowDays }).then(r => r.data),
+  createPlan: (data: Partial<HealingPlan>) =>
+    api.post<HealingPlan>('/healing/plans', data).then(r => r.data),
+  updatePlan: (id: string, data: Partial<HealingPlan>) =>
+    api.put<HealingPlan>(`/healing/plans/${id}`, data).then(r => r.data),
+  deletePlan: (id: string) =>
+    api.delete(`/healing/plans/${id}`).then(r => r.data),
+
+  getPlanActions: (planId: string) =>
+    api.get<HealingAction[]>(`/healing/plans/${planId}/actions`).then(r => r.data),
+  createAction: (planId: string, data: Partial<HealingAction>) =>
+    api.post<HealingAction>(`/healing/plans/${planId}/actions`, data).then(r => r.data),
+  getActions: (params?: { date?: string; status?: string; category?: string }) =>
+    api.get<HealingAction[]>('/healing/actions', { params }).then(r => r.data),
+  getTodayActions: (date?: string) =>
+    api.get<HealingAction[]>('/healing/actions/today', { params: date ? { date } : {} }).then(r => r.data),
+  updateAction: (id: string, data: Partial<HealingAction>) =>
+    api.put<HealingAction>(`/healing/actions/${id}`, data).then(r => r.data),
+  deleteAction: (id: string) =>
+    api.delete(`/healing/actions/${id}`).then(r => r.data),
+  completeAction: (id: string, data?: { date?: string; completed?: boolean; moodBefore?: number; moodAfter?: number; durationMinutes?: number; notes?: string }) =>
+    api.post<{ record: HealingCompletionRecord; action: HealingAction }>(`/healing/actions/${id}/complete`, data || {}).then(r => r.data),
+  getActionCompletions: (actionId: string) =>
+    api.get<HealingCompletionRecord[]>(`/healing/actions/${actionId}/completions`).then(r => r.data),
+  getPlanCompletions: (planId: string, params?: { start?: string; end?: string }) =>
+    api.get<HealingCompletionRecord[]>(`/healing/plans/${planId}/completions`, { params }).then(r => r.data),
+
+  getPlanReviews: (planId: string) =>
+    api.get<HealingReviewNote[]>(`/healing/plans/${planId}/reviews`).then(r => r.data),
+  createReview: (planId: string, data: Partial<HealingReviewNote>) =>
+    api.post<HealingReviewNote>(`/healing/plans/${planId}/reviews`, data).then(r => r.data),
+  updateReview: (id: string, data: Partial<HealingReviewNote>) =>
+    api.put<HealingReviewNote>(`/healing/reviews/${id}`, data).then(r => r.data),
+  deleteReview: (id: string) =>
+    api.delete(`/healing/reviews/${id}`).then(r => r.data),
+
+  getTodaySuggestions: (date?: string) =>
+    api.get<HealingSuggestion[]>('/healing/suggestions/today', { params: date ? { date } : {} }).then(r => r.data),
+  getSuggestionsRange: (start: string, end: string) =>
+    api.get<HealingSuggestion[]>('/healing/suggestions/range', { params: { start, end } }).then(r => r.data),
+  refreshSuggestions: (date?: string) =>
+    api.post<{ refreshed: number; suggestions: HealingSuggestion[] }>('/healing/suggestions/refresh', date ? { date } : {}).then(r => r.data),
+
+  getPlanProgress: (planId: string) =>
+    api.get<HealingProgressStats>(`/healing/plans/${planId}/progress`).then(r => r.data),
 };

@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { insightsApi } from '../api';
+import { insightsApi, healingApi } from '../api';
 import type {
   InsightAlert,
   InsightSummary,
   InsightRuleConfig,
   InsightRuleType,
   InsightSeverity,
+  HealingSuggestion,
 } from '../types';
 import {
   INSIGHT_RULE_LABELS,
@@ -13,6 +14,11 @@ import {
   INSIGHT_SEVERITY_COLORS,
   PHASE_NAMES,
   MOOD_EMOJI,
+  HEALING_CATEGORY_EMOJI,
+  HEALING_CATEGORY_LABELS,
+  HEALING_CATEGORY_COLORS,
+  PRIORITY_LABELS,
+  SUGGESTION_SOURCE_LABELS,
 } from '../types';
 import { formatLocalDate, todayStr } from '../utils/date';
 
@@ -73,6 +79,13 @@ export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'timeline' | 'rules'>('overview');
   const [savingRule, setSavingRule] = useState<string | null>(null);
   const [selectedAlert, setSelectedAlert] = useState<InsightAlert | null>(null);
+  const [todaySuggestions, setTodaySuggestions] = useState<HealingSuggestion[]>([]);
+
+  useEffect(() => {
+    healingApi.getTodaySuggestions()
+      .then(setTodaySuggestions)
+      .catch(() => setTodaySuggestions([]));
+  }, []);
 
   const dateRange = useMemo(() => {
     const opt = RANGE_OPTIONS.find(o => o.key === range)!;
@@ -222,6 +235,42 @@ export default function InsightsPage() {
           ))}
         </div>
       </div>
+
+      {activeTab === 'overview' && (
+        todaySuggestions.length > 0 && (
+          <div className="card" style={{ marginBottom: 20 }}>
+            <h3 className="card-title">💚 今日疗愈建议</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {todaySuggestions.slice(0, 3).map(s => (
+                <div key={s.id} className="healing-mini-card">
+                  <div className="healing-mini-header">
+                    <span className="category-tag" style={{ background: HEALING_CATEGORY_COLORS[s.category] }}>
+                      {HEALING_CATEGORY_EMOJI[s.category]} {HEALING_CATEGORY_LABELS[s.category]}
+                    </span>
+                    <span className={`priority-tag priority-${s.priority}`}>
+                      {PRIORITY_LABELS[s.priority]}
+                    </span>
+                  </div>
+                  <div className="healing-mini-title">{s.title}</div>
+                  {s.description && (
+                    <div className="healing-mini-desc">{s.description}</div>
+                  )}
+                  <div className="source-tag">
+                    来源：{SUGGESTION_SOURCE_LABELS[s.source] || s.source}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', marginTop: 12, padding: '8px', fontSize: '0.9em' }}
+              onClick={() => { window.location.hash = '#/healing'; }}
+            >
+              查看完整疗愈计划 →
+            </button>
+          </div>
+        )
+      )}
 
       {activeTab === 'overview' && summary && (
         <div>

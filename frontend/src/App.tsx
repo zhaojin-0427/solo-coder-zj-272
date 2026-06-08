@@ -7,6 +7,7 @@ import YearlyReviewPage from './pages/YearlyReviewPage';
 import InsightsPage from './pages/InsightsPage';
 import SharingCenterPage from './pages/SharingCenterPage';
 import PublicSharePage from './pages/PublicSharePage';
+import HealingPlanPage from './pages/HealingPlanPage';
 
 const navItems = [
   { key: 'daily', label: '每日记录', path: '/' },
@@ -14,6 +15,7 @@ const navItems = [
   { key: 'stats', label: '周期统计', path: '/stats' },
   { key: 'insights', label: '🔮 洞察预警', path: '/insights' },
   { key: 'wordcloud', label: '心情词云', path: '/wordcloud' },
+  { key: 'healing', label: '💚 疗愈计划', path: '/healing' },
   { key: 'yearly', label: '年度回顾', path: '/yearly' },
   { key: 'sharing', label: '💞 共享中心', path: '/sharing' },
 ];
@@ -48,6 +50,7 @@ function MainLayout() {
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/wordcloud" element={<WordCloudPage />} />
+          <Route path="/healing" element={<HealingPlanPage />} />
           <Route path="/yearly" element={<YearlyReviewPage />} />
           <Route path="/sharing" element={<SharingCenterPage />} />
         </Routes>

@@ -7,6 +7,7 @@ import cycleRouter from './routes/cycle';
 import uploadRouter from './routes/upload';
 import insightsRouter from './routes/insights';
 import sharingRouter from './routes/sharing';
+import healingRouter from './routes/healing';
 
 const app = express();
 const PORT = 9102;
@@ -26,6 +27,7 @@ app.use('/api/cycle', cycleRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/insights', insightsRouter);
 app.use('/api/sharing', sharingRouter);
+app.use('/api/healing', healingRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 后端服务已启动: http://localhost:${PORT}`);
@@ -61,4 +63,27 @@ app.listen(PORT, () => {
   console.log(`   PUT  /api/sharing/notes/:entryId`);
   console.log(`   GET  /api/sharing/public/:token`);
   console.log(`   POST /api/sharing/public/:token/feedback`);
+  console.log(`   GET  /api/healing/plans`);
+  console.log(`   GET  /api/healing/plans/active`);
+  console.log(`   GET  /api/healing/plans/:id`);
+  console.log(`   POST /api/healing/plans/generate`);
+  console.log(`   POST /api/healing/plans`);
+  console.log(`   PUT  /api/healing/plans/:id`);
+  console.log(`   DELETE /api/healing/plans/:id`);
+  console.log(`   GET  /api/healing/plans/:id/actions`);
+  console.log(`   POST /api/healing/plans/:id/actions`);
+  console.log(`   GET  /api/healing/actions`);
+  console.log(`   GET  /api/healing/actions/today`);
+  console.log(`   PUT  /api/healing/actions/:id`);
+  console.log(`   DELETE /api/healing/actions/:id`);
+  console.log(`   POST /api/healing/actions/:id/complete`);
+  console.log(`   GET  /api/healing/plans/:id/completions`);
+  console.log(`   GET  /api/healing/plans/:id/reviews`);
+  console.log(`   POST /api/healing/plans/:id/reviews`);
+  console.log(`   PUT  /api/healing/reviews/:id`);
+  console.log(`   DELETE /api/healing/reviews/:id`);
+  console.log(`   GET  /api/healing/suggestions/today`);
+  console.log(`   GET  /api/healing/suggestions/range`);
+  console.log(`   POST /api/healing/suggestions/refresh`);
+  console.log(`   GET  /api/healing/plans/:id/progress`);
 });

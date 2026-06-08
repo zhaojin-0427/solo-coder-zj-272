@@ -12,6 +12,11 @@ import {
   ShareAuditLog,
   ShareFeedback,
   EntryPrivateNote,
+  HealingPlan,
+  HealingAction,
+  HealingCompletionRecord,
+  HealingReviewNote,
+  HealingSuggestion,
 } from './types';
 import { getDefaultCycleInfo } from './utils/cycle';
 
@@ -26,6 +31,11 @@ const SHARE_LINKS_FILE = path.join(DATA_DIR, 'share-links.json');
 const SHARE_AUDIT_FILE = path.join(DATA_DIR, 'share-audit.json');
 const SHARE_FEEDBACK_FILE = path.join(DATA_DIR, 'share-feedback.json');
 const PRIVATE_NOTES_FILE = path.join(DATA_DIR, 'private-notes.json');
+const HEALING_PLANS_FILE = path.join(DATA_DIR, 'healing-plans.json');
+const HEALING_ACTIONS_FILE = path.join(DATA_DIR, 'healing-actions.json');
+const HEALING_COMPLETIONS_FILE = path.join(DATA_DIR, 'healing-completions.json');
+const HEALING_REVIEWS_FILE = path.join(DATA_DIR, 'healing-reviews.json');
+const HEALING_SUGGESTIONS_FILE = path.join(DATA_DIR, 'healing-suggestions.json');
 
 function ensureDataDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
@@ -605,4 +615,345 @@ export function deletePrivateNote(entryId: string): boolean {
     return true;
   }
   return false;
+}
+
+function readHealingPlans(): HealingPlan[] {
+  const defaultValue = { plans: [] as HealingPlan[] };
+  const data = readJSONFile<{ plans: HealingPlan[] }>(HEALING_PLANS_FILE, defaultValue);
+  if (!fs.existsSync(HEALING_PLANS_FILE)) {
+    writeJSONFile(HEALING_PLANS_FILE, data);
+  }
+  return data.plans;
+}
+
+function writeHealingPlans(plans: HealingPlan[]): void {
+  writeJSONFile(HEALING_PLANS_FILE, { plans });
+}
+
+export function getAllHealingPlans(): HealingPlan[] {
+  return readHealingPlans().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function getActiveHealingPlans(): HealingPlan[] {
+  return readHealingPlans().filter(p => p.status === 'active').sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function getHealingPlanById(id: string): HealingPlan | undefined {
+  return readHealingPlans().find(p => p.id === id);
+}
+
+export function createHealingPlan(data: Omit<HealingPlan, 'id' | 'createdAt' | 'updatedAt'>): HealingPlan {
+  const plans = readHealingPlans();
+  const now = new Date().toISOString();
+  const plan: HealingPlan = {
+    ...data,
+    id: `plan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+  plans.push(plan);
+  writeHealingPlans(plans);
+  return plan;
+}
+
+export function updateHealingPlan(id: string, updates: Partial<HealingPlan>): HealingPlan | undefined {
+  const plans = readHealingPlans();
+  const idx = plans.findIndex(p => p.id === id);
+  if (idx >= 0) {
+    plans[idx] = { ...plans[idx], ...updates, updatedAt: new Date().toISOString() };
+    writeHealingPlans(plans);
+    return plans[idx];
+  }
+  return undefined;
+}
+
+export function deleteHealingPlan(id: string): boolean {
+  const plans = readHealingPlans();
+  const idx = plans.findIndex(p => p.id === id);
+  if (idx >= 0) {
+    plans.splice(idx, 1);
+    writeHealingPlans(plans);
+    const actions = readHealingActions().filter(a => a.planId !== id);
+    writeHealingActions(actions);
+    const completions = readHealingCompletions().filter(c => c.planId !== id);
+    writeHealingCompletions(completions);
+    const reviews = readHealingReviews().filter(r => r.planId !== id);
+    writeHealingReviews(reviews);
+    const suggestions = readHealingSuggestions().filter(s => s.planId !== id);
+    writeHealingSuggestions(suggestions);
+    return true;
+  }
+  return false;
+}
+
+function readHealingActions(): HealingAction[] {
+  const defaultValue = { actions: [] as HealingAction[] };
+  const data = readJSONFile<{ actions: HealingAction[] }>(HEALING_ACTIONS_FILE, defaultValue);
+  if (!fs.existsSync(HEALING_ACTIONS_FILE)) {
+    writeJSONFile(HEALING_ACTIONS_FILE, data);
+  }
+  return data.actions;
+}
+
+function writeHealingActions(actions: HealingAction[]): void {
+  writeJSONFile(HEALING_ACTIONS_FILE, { actions });
+}
+
+export function getActionsByPlanId(planId: string): HealingAction[] {
+  return readHealingActions()
+    .filter(a => a.planId === planId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
+}
+
+export function getHealingActionById(id: string): HealingAction | undefined {
+  return readHealingActions().find(a => a.id === id);
+}
+
+export function getAllHealingActions(params?: { date?: string; status?: string; category?: string }): HealingAction[] {
+  let actions = readHealingActions();
+  if (params?.date) {
+    actions = actions.filter(a => !a.reminderDate || a.reminderDate === params.date);
+  }
+  if (params?.status) {
+    actions = actions.filter(a => a.status === params.status);
+  }
+  if (params?.category) {
+    actions = actions.filter(a => a.category === params.category);
+  }
+  return actions.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function createHealingAction(data: Omit<HealingAction, 'id' | 'createdAt' | 'updatedAt'>): HealingAction {
+  const actions = readHealingActions();
+  const now = new Date().toISOString();
+  const action: HealingAction = {
+    ...data,
+    id: `action_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+  actions.push(action);
+  writeHealingActions(actions);
+  return action;
+}
+
+export function createHealingActionsBatch(actionsData: Omit<HealingAction, 'id' | 'createdAt' | 'updatedAt'>[]): HealingAction[] {
+  const actions = readHealingActions();
+  const now = new Date().toISOString();
+  const created: HealingAction[] = [];
+  for (const data of actionsData) {
+    const action: HealingAction = {
+      ...data,
+      id: `action_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    actions.push(action);
+    created.push(action);
+  }
+  writeHealingActions(actions);
+  return created;
+}
+
+export function updateHealingAction(id: string, updates: Partial<HealingAction>): HealingAction | undefined {
+  const actions = readHealingActions();
+  const idx = actions.findIndex(a => a.id === id);
+  if (idx >= 0) {
+    actions[idx] = { ...actions[idx], ...updates, updatedAt: new Date().toISOString() };
+    writeHealingActions(actions);
+    return actions[idx];
+  }
+  return undefined;
+}
+
+export function deleteHealingAction(id: string): boolean {
+  const actions = readHealingActions();
+  const idx = actions.findIndex(a => a.id === id);
+  if (idx >= 0) {
+    actions.splice(idx, 1);
+    writeHealingActions(actions);
+    const completions = readHealingCompletions().filter(c => c.actionId !== id);
+    writeHealingCompletions(completions);
+    const reviews = readHealingReviews().filter(r => r.actionId !== id);
+    writeHealingReviews(reviews);
+    return true;
+  }
+  return false;
+}
+
+function readHealingCompletions(): HealingCompletionRecord[] {
+  const defaultValue = { completions: [] as HealingCompletionRecord[] };
+  const data = readJSONFile<{ completions: HealingCompletionRecord[] }>(HEALING_COMPLETIONS_FILE, defaultValue);
+  if (!fs.existsSync(HEALING_COMPLETIONS_FILE)) {
+    writeJSONFile(HEALING_COMPLETIONS_FILE, data);
+  }
+  return data.completions;
+}
+
+function writeHealingCompletions(completions: HealingCompletionRecord[]): void {
+  writeJSONFile(HEALING_COMPLETIONS_FILE, { completions });
+}
+
+export function getCompletionsByActionId(actionId: string): HealingCompletionRecord[] {
+  return readHealingCompletions()
+    .filter(c => c.actionId === actionId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getCompletionsByPlanId(planId: string): HealingCompletionRecord[] {
+  return readHealingCompletions()
+    .filter(c => c.planId === planId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getCompletionsByDate(date: string): HealingCompletionRecord[] {
+  return readHealingCompletions().filter(c => c.date === date);
+}
+
+export function getCompletionsByDateRange(start: string, end: string): HealingCompletionRecord[] {
+  return readHealingCompletions()
+    .filter(c => c.date >= start && c.date <= end)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function createHealingCompletion(data: Omit<HealingCompletionRecord, 'id' | 'createdAt'>): HealingCompletionRecord {
+  const completions = readHealingCompletions();
+  const now = new Date().toISOString();
+  const record: HealingCompletionRecord = {
+    ...data,
+    id: `comp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: now,
+  };
+  completions.push(record);
+  writeHealingCompletions(completions);
+  return record;
+}
+
+export function updateHealingCompletion(id: string, updates: Partial<HealingCompletionRecord>): HealingCompletionRecord | undefined {
+  const completions = readHealingCompletions();
+  const idx = completions.findIndex(c => c.id === id);
+  if (idx >= 0) {
+    completions[idx] = { ...completions[idx], ...updates };
+    writeHealingCompletions(completions);
+    return completions[idx];
+  }
+  return undefined;
+}
+
+function readHealingReviews(): HealingReviewNote[] {
+  const defaultValue = { reviews: [] as HealingReviewNote[] };
+  const data = readJSONFile<{ reviews: HealingReviewNote[] }>(HEALING_REVIEWS_FILE, defaultValue);
+  if (!fs.existsSync(HEALING_REVIEWS_FILE)) {
+    writeJSONFile(HEALING_REVIEWS_FILE, data);
+  }
+  return data.reviews;
+}
+
+function writeHealingReviews(reviews: HealingReviewNote[]): void {
+  writeJSONFile(HEALING_REVIEWS_FILE, { reviews });
+}
+
+export function getReviewsByPlanId(planId: string): HealingReviewNote[] {
+  return readHealingReviews()
+    .filter(r => r.planId === planId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getReviewsByActionId(actionId: string): HealingReviewNote[] {
+  return readHealingReviews()
+    .filter(r => r.actionId === actionId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getReviewsByDate(date: string): HealingReviewNote[] {
+  return readHealingReviews().filter(r => r.date === date);
+}
+
+export function createHealingReview(data: Omit<HealingReviewNote, 'id' | 'createdAt' | 'updatedAt'>): HealingReviewNote {
+  const reviews = readHealingReviews();
+  const now = new Date().toISOString();
+  const review: HealingReviewNote = {
+    ...data,
+    id: `review_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+  reviews.push(review);
+  writeHealingReviews(reviews);
+  return review;
+}
+
+export function updateHealingReview(id: string, updates: Partial<HealingReviewNote>): HealingReviewNote | undefined {
+  const reviews = readHealingReviews();
+  const idx = reviews.findIndex(r => r.id === id);
+  if (idx >= 0) {
+    reviews[idx] = { ...reviews[idx], ...updates, updatedAt: new Date().toISOString() };
+    writeHealingReviews(reviews);
+    return reviews[idx];
+  }
+  return undefined;
+}
+
+export function deleteHealingReview(id: string): boolean {
+  const reviews = readHealingReviews();
+  const idx = reviews.findIndex(r => r.id === id);
+  if (idx >= 0) {
+    reviews.splice(idx, 1);
+    writeHealingReviews(reviews);
+    return true;
+  }
+  return false;
+}
+
+function readHealingSuggestions(): HealingSuggestion[] {
+  const defaultValue = { suggestions: [] as HealingSuggestion[] };
+  const data = readJSONFile<{ suggestions: HealingSuggestion[] }>(HEALING_SUGGESTIONS_FILE, defaultValue);
+  if (!fs.existsSync(HEALING_SUGGESTIONS_FILE)) {
+    writeJSONFile(HEALING_SUGGESTIONS_FILE, data);
+  }
+  return data.suggestions;
+}
+
+function writeHealingSuggestions(suggestions: HealingSuggestion[]): void {
+  writeJSONFile(HEALING_SUGGESTIONS_FILE, { suggestions });
+}
+
+export function getSuggestionsByDate(date: string): HealingSuggestion[] {
+  return readHealingSuggestions()
+    .filter(s => s.date === date)
+    .sort((a, b) => {
+      const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+}
+
+export function getSuggestionsByDateRange(start: string, end: string): HealingSuggestion[] {
+  return readHealingSuggestions()
+    .filter(s => s.date >= start && s.date <= end)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function saveHealingSuggestions(suggestions: Omit<HealingSuggestion, 'id' | 'createdAt'>[]): HealingSuggestion[] {
+  const existing = readHealingSuggestions();
+  const now = new Date().toISOString();
+  const created: HealingSuggestion[] = [];
+  for (const s of suggestions) {
+    const suggestion: HealingSuggestion = {
+      ...s,
+      id: `sug_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: now,
+    };
+    existing.push(suggestion);
+    created.push(suggestion);
+  }
+  writeHealingSuggestions(existing);
+  return created;
+}
+
+export function clearSuggestionsByDate(date: string): number {
+  const existing = readHealingSuggestions();
+  const remaining = existing.filter(s => s.date !== date);
+  const removed = existing.length - remaining.length;
+  writeHealingSuggestions(remaining);
+  return removed;
 }

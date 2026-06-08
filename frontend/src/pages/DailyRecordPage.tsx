@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { entriesApi, uploadApi, cycleApi, sharingApi } from '../api';
-import type { DiaryEntry, StickerType, Visibility, CycleInfo } from '../types';
-import { MOOD_EMOJI, STICKER_EMOJI, PHASE_NAMES, PHASE_COLORS } from '../types';
+import { entriesApi, uploadApi, cycleApi, sharingApi, healingApi } from '../api';
+import type { DiaryEntry, StickerType, Visibility, CycleInfo, HealingSuggestion } from '../types';
+import { MOOD_EMOJI, STICKER_EMOJI, PHASE_NAMES, PHASE_COLORS, HEALING_CATEGORY_EMOJI, HEALING_CATEGORY_LABELS, HEALING_CATEGORY_COLORS, PRIORITY_LABELS, SUGGESTION_SOURCE_LABELS } from '../types';
 import { todayStr } from '../utils/date';
 
 const PRESET_KEYWORDS = [
@@ -34,6 +34,7 @@ export default function DailyRecordPage() {
   const [savedMsg, setSavedMsg] = useState('');
   const [privateNote, setPrivateNote] = useState('');
   const [privateNoteSaved, setPrivateNoteSaved] = useState(false);
+  const [todaySuggestions, setTodaySuggestions] = useState<HealingSuggestion[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,10 +43,12 @@ export default function DailyRecordPage() {
 
   async function loadData() {
     try {
-      const [entry, cycle] = await Promise.all([
+      const [entry, cycle, suggestions] = await Promise.all([
         entriesApi.getByDate(date),
         cycleApi.get(),
+        healingApi.getTodaySuggestions(date).catch(() => [] as HealingSuggestion[]),
       ]);
+      setTodaySuggestions(suggestions);
       setCycleInfo(cycle);
       if (entry) {
         setExistingEntry(entry);
@@ -355,6 +358,40 @@ export default function DailyRecordPage() {
       </div>
 
       <div className="col">
+        {todaySuggestions.length > 0 && (
+          <div className="card" style={{ marginBottom: 16 }}>
+            <h2 className="card-title">💚 今日疗愈建议</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {todaySuggestions.slice(0, 3).map(s => (
+                <div key={s.id} className="healing-mini-card">
+                  <div className="healing-mini-header">
+                    <span className="category-tag" style={{ background: HEALING_CATEGORY_COLORS[s.category] }}>
+                      {HEALING_CATEGORY_EMOJI[s.category]} {HEALING_CATEGORY_LABELS[s.category]}
+                    </span>
+                    <span className={`priority-tag priority-${s.priority}`}>
+                      {PRIORITY_LABELS[s.priority]}
+                    </span>
+                  </div>
+                  <div className="healing-mini-title">{s.title}</div>
+                  {s.description && (
+                    <div className="healing-mini-desc">{s.description}</div>
+                  )}
+                  <div className="source-tag">
+                    来源：{SUGGESTION_SOURCE_LABELS[s.source] || s.source}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', marginTop: 12, padding: '8px', fontSize: '0.9em' }}
+              onClick={() => { window.location.hash = '#/healing'; }}
+            >
+              查看完整疗愈计划 →
+            </button>
+          </div>
+        )}
+
         <div className="card">
           <h2 className="card-title">✨ 记录预览</h2>
           <div className="entry-preview">
