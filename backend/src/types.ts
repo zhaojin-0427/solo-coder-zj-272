@@ -427,3 +427,94 @@ export interface HealingProgressStats {
   weeklyTrend: { week: string; completed: number; total: number }[];
   moodCorrelation: { completionRate: number; avgMood: number }[];
 }
+
+export type ReminderRuleType =
+  | 'daily_record'
+  | 'period_start'
+  | 'low_mood_review'
+  | 'healing_action';
+
+export type ReminderStatus = 'pending' | 'completed' | 'ignored';
+
+export interface ReminderRule {
+  id: string;
+  type: ReminderRuleType;
+  name: string;
+  description: string;
+  enabled: boolean;
+  time: string;
+  daysAhead?: number;
+  moodThreshold?: number;
+  consecutiveDays?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReminderInstance {
+  id: string;
+  ruleId: string;
+  ruleType: ReminderRuleType;
+  title: string;
+  description: string;
+  triggerDate: string;
+  triggerTime: string;
+  status: ReminderStatus;
+  linkedEntryId?: string;
+  linkedActionId?: string;
+  handledAt?: string;
+  createdAt: string;
+}
+
+export const DEFAULT_REMINDER_RULES: Omit<ReminderRule, 'id' | 'createdAt' | 'updatedAt'>[] = [
+  {
+    type: 'daily_record',
+    name: '每日记录提醒',
+    description: '每天提醒记录当日心情与日记',
+    enabled: true,
+    time: '21:00',
+  },
+  {
+    type: 'period_start',
+    name: '经期开始前提醒',
+    description: '预计经期开始前提醒做好准备',
+    enabled: true,
+    time: '09:00',
+    daysAhead: 2,
+  },
+  {
+    type: 'low_mood_review',
+    name: '低分情绪复盘提醒',
+    description: '连续情绪低落时提醒进行复盘',
+    enabled: true,
+    time: '20:00',
+    moodThreshold: 4,
+    consecutiveDays: 2,
+  },
+  {
+    type: 'healing_action',
+    name: '当天疗愈行动提醒',
+    description: '提醒完成当日安排的疗愈行动',
+    enabled: true,
+    time: '10:00',
+  },
+];
+
+export const REMINDER_TYPE_LABELS: Record<ReminderRuleType, string> = {
+  daily_record: '📝 每日记录',
+  period_start: '🩸 经期前提醒',
+  low_mood_review: '💭 情绪复盘',
+  healing_action: '💚 疗愈行动',
+};
+
+export const REMINDER_TYPE_COLORS: Record<ReminderRuleType, string> = {
+  daily_record: '#FFB74D',
+  period_start: '#F06292',
+  low_mood_review: '#7986CB',
+  healing_action: '#81C784',
+};
+
+export const REMINDER_STATUS_LABELS: Record<ReminderStatus, string> = {
+  pending: '待处理',
+  completed: '已完成',
+  ignored: '已忽略',
+};

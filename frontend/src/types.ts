@@ -486,3 +486,67 @@ export interface HealingProgressStats {
   weeklyTrend: { week: string; completed: number; total: number }[];
   moodCorrelation: { completionRate: number; avgMood: number }[];
 }
+
+export type ReminderRuleType =
+  | 'daily_record'
+  | 'period_start'
+  | 'low_mood_review'
+  | 'healing_action';
+
+export type ReminderStatus = 'pending' | 'completed' | 'ignored';
+
+export interface ReminderRule {
+  id: string;
+  type: ReminderRuleType;
+  name: string;
+  description: string;
+  enabled: boolean;
+  time: string;
+  daysAhead?: number;
+  moodThreshold?: number;
+  consecutiveDays?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReminderInstance {
+  id: string;
+  ruleId: string;
+  ruleType: ReminderRuleType;
+  title: string;
+  description: string;
+  triggerDate: string;
+  triggerTime: string;
+  status: ReminderStatus;
+  linkedEntryId?: string;
+  linkedActionId?: string;
+  handledAt?: string;
+  createdAt: string;
+}
+
+export const REMINDER_TYPE_LABELS: Record<ReminderRuleType, string> = {
+  daily_record: '📝 每日记录',
+  period_start: '🩸 经期前提醒',
+  low_mood_review: '💭 情绪复盘',
+  healing_action: '💚 疗愈行动',
+};
+
+export const REMINDER_TYPE_COLORS: Record<ReminderRuleType, string> = {
+  daily_record: '#FFB74D',
+  period_start: '#F06292',
+  low_mood_review: '#7986CB',
+  healing_action: '#81C784',
+};
+
+export const REMINDER_STATUS_LABELS: Record<ReminderStatus, string> = {
+  pending: '待处理',
+  completed: '已完成',
+  ignored: '已忽略',
+};
+
+export interface ReminderSummary {
+  today: ReminderInstance[];
+  next7Days: ReminderInstance[];
+  history: ReminderInstance[];
+  pendingCount: number;
+}

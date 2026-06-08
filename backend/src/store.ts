@@ -17,6 +17,9 @@ import {
   HealingCompletionRecord,
   HealingReviewNote,
   HealingSuggestion,
+  ReminderRule,
+  ReminderInstance,
+  DEFAULT_REMINDER_RULES,
 } from './types';
 import { getDefaultCycleInfo } from './utils/cycle';
 
@@ -36,6 +39,8 @@ const HEALING_ACTIONS_FILE = path.join(DATA_DIR, 'healing-actions.json');
 const HEALING_COMPLETIONS_FILE = path.join(DATA_DIR, 'healing-completions.json');
 const HEALING_REVIEWS_FILE = path.join(DATA_DIR, 'healing-reviews.json');
 const HEALING_SUGGESTIONS_FILE = path.join(DATA_DIR, 'healing-suggestions.json');
+const REMINDER_RULES_FILE = path.join(DATA_DIR, 'reminder-rules.json');
+const REMINDER_INSTANCES_FILE = path.join(DATA_DIR, 'reminder-instances.json');
 
 function ensureDataDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
@@ -955,5 +960,186 @@ export function clearSuggestionsByDate(date: string): number {
   const remaining = existing.filter(s => s.date !== date);
   const removed = existing.length - remaining.length;
   writeHealingSuggestions(remaining);
+  return removed;
+}
+
+function readReminderRules(): ReminderRule[] {
+  const defaultValue = { rules: [] as ReminderRule[] };
+  const data = readJSONFile<{ rules: ReminderRule[] }>(REMINDER_RULES_FILE, defaultValue);
+  if (!fs.existsSync(REMINDER_RULES_FILE)) {
+    const now = new Date().toISOString();
+    const initialRules: ReminderRule[] = DEFAULT_REMINDER_RULES.map((r, i) => ({
+      ...r,
+      id: `rule_default_${i}`,
+      createdAt: now,
+      updatedAt: now,
+    }));
+    writeJSONFile(REMINDER_RULES_FILE, { rules: initialRules });
+    return initialRules;
+  }
+  return data.rules;
+}
+
+function writeReminderRules(rules: ReminderRule[]): void {
+  writeJSONFile(REMINDER_RULES_FILE, { rules });
+}
+
+export function getReminderRules(): ReminderRule[] {
+  return readReminderRules();
+}
+
+export function getReminderRuleById(id: string): ReminderRule | undefined {
+  return readReminderRules().find(r => r.id === id);
+}
+
+export function getReminderRuleByType(type: string): ReminderRule | undefined {
+  return readReminderRules().find(r => r.type === type);
+}
+
+export function updateReminderRule(id: string, updates: Partial<ReminderRule>): ReminderRule | undefined {
+  const rules = readReminderRules();
+  const idx = rules.findIndex(r => r.id === id);
+  if (idx >= 0) {
+    rules[idx] = { ...rules[idx], ...updates, updatedAt: new Date().toISOString() };
+    writeReminderRules(rules);
+    return rules[idx];
+  }
+  return undefined;
+}
+
+export function updateReminderRules(rules: ReminderRule[]): ReminderRule[] {
+  const current = readReminderRules();
+  const merged = current.map(rule => {
+    const updated = rules.find(r => r.id === rule.id);
+    return updated ? { ...rule, ...updated, updatedAt: new Date().toISOString() } : rule;
+  });
+  const newRules = rules.filter(r => !current.find(c => c.id === r.id)).map(r => ({
+    ...r,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }));
+  const final = [...merged, ...newRules];
+  writeReminderRules(final);
+  return final;
+}
+
+function readReminderInstances(): ReminderInstance[] {
+  const defaultValue = { instances: [] as ReminderInstance[] };
+  const data = readJSONFile<{ instances: ReminderInstance[] }>(REMINDER_INSTANCES_FILE, defaultValue);
+  if (!fs.existsSync(REMINDER_INSTANCES_FILE)) {
+    writeJSONFile(REMINDER_INSTANCES_FILE, data);
+  }
+  return data.instances;
+}
+
+function writeReminderInstances(instances: ReminderInstance[]): void {
+  writeJSONFile(REMINDER_INSTANCES_FILE, { instances });
+}
+
+export function getReminderInstances(params?: {
+  start?: string;
+  end?: string;
+  date?: string;
+  status?: string;
+  ruleType?: string;
+  ruleId?: string;
+  limit?: number;
+}): ReminderInstance[] {
+  let instances = readReminderInstances();
+  if (params?.date) {
+    instances = instances.filter(i => i.triggerDate === params.date);
+  }
+  if (params?.start) {
+    instances = instances.filter(i => i.triggerDate >= params.start!);
+  }
+  if (params?.end) {
+    instances = instances.filter(i => i.triggerDate <= params.end!);
+  }
+  if (params?.status) {
+    instances = instances.filter(i => i.status === params.status);
+  }
+  if (params?.ruleType) {
+    instances = instances.filter(i => i.ruleType === params.ruleType);
+  }
+  if (params?.ruleId) {
+    instances = instances.filter(i => i.ruleId === params.ruleId);
+  }
+  instances = instances.sort((a, b) => {
+    if (a.triggerDate !== b.triggerDate) return a.triggerDate.localeCompare(b.triggerDate);
+    return a.triggerTime.localeCompare(b.triggerTime);
+  });
+  if (params?.limit) {
+    instances = instances.slice(0, params.limit);
+  }
+  return instances;
+}
+
+export function getReminderInstanceById(id: string): ReminderInstance | undefined {
+  return readReminderInstances().find(i => i.id === id);
+}
+
+export function getReminderDates(params?: { start?: string; end?: string; status?: string }): string[] {
+  let instances = readReminderInstances();
+  if (params?.start) instances = instances.filter(i => i.triggerDate >= params.start!);
+  if (params?.end) instances = instances.filter(i => i.triggerDate <= params.end!);
+  if (params?.status) instances = instances.filter(i => i.status === params.status);
+  const dates = new Set<string>();
+  instances.forEach(i => dates.add(i.triggerDate));
+  return Array.from(dates).sort();
+}
+
+export function createReminderInstance(data: Omit<ReminderInstance, 'id' | 'createdAt'>): ReminderInstance {
+  const instances = readReminderInstances();
+  const now = new Date().toISOString();
+  const instance: ReminderInstance = {
+    ...data,
+    id: `rem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: now,
+  };
+  instances.push(instance);
+  writeReminderInstances(instances);
+  return instance;
+}
+
+export function createReminderInstancesBatch(dataList: Omit<ReminderInstance, 'id' | 'createdAt'>[]): ReminderInstance[] {
+  const instances = readReminderInstances();
+  const now = new Date().toISOString();
+  const created: ReminderInstance[] = [];
+  for (const data of dataList) {
+    const exists = instances.some(
+      i => i.ruleId === data.ruleId && i.triggerDate === data.triggerDate && i.status !== 'ignored'
+    );
+    if (exists) continue;
+    const instance: ReminderInstance = {
+      ...data,
+      id: `rem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: now,
+    };
+    instances.push(instance);
+    created.push(instance);
+  }
+  writeReminderInstances(instances);
+  return created;
+}
+
+export function updateReminderInstance(id: string, updates: Partial<ReminderInstance>): ReminderInstance | undefined {
+  const instances = readReminderInstances();
+  const idx = instances.findIndex(i => i.id === id);
+  if (idx >= 0) {
+    instances[idx] = { ...instances[idx], ...updates };
+    if ((updates.status === 'completed' || updates.status === 'ignored') && !instances[idx].handledAt) {
+      instances[idx].handledAt = new Date().toISOString();
+    }
+    writeReminderInstances(instances);
+    return instances[idx];
+  }
+  return undefined;
+}
+
+export function clearInstancesByDateRange(start: string, end: string): number {
+  const existing = readReminderInstances();
+  const remaining = existing.filter(i => i.triggerDate < start || i.triggerDate > end || i.status !== 'pending');
+  const removed = existing.length - remaining.length;
+  writeReminderInstances(remaining);
   return removed;
 }

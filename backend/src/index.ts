@@ -8,6 +8,7 @@ import uploadRouter from './routes/upload';
 import insightsRouter from './routes/insights';
 import sharingRouter from './routes/sharing';
 import healingRouter from './routes/healing';
+import remindersRouter from './routes/reminders';
 
 const app = express();
 const PORT = 9102;
@@ -28,6 +29,7 @@ app.use('/api/upload', uploadRouter);
 app.use('/api/insights', insightsRouter);
 app.use('/api/sharing', sharingRouter);
 app.use('/api/healing', healingRouter);
+app.use('/api/reminders', remindersRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 后端服务已启动: http://localhost:${PORT}`);
@@ -86,4 +88,17 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/healing/suggestions/range`);
   console.log(`   POST /api/healing/suggestions/refresh`);
   console.log(`   GET  /api/healing/plans/:id/progress`);
+  console.log(`   GET  /api/reminders/rules`);
+  console.log(`   PUT  /api/reminders/rules`);
+  console.log(`   PUT  /api/reminders/rules/:id`);
+  console.log(`   GET  /api/reminders/instances`);
+  console.log(`   GET  /api/reminders/instances/dates`);
+  console.log(`   GET  /api/reminders/instances/:id`);
+  console.log(`   POST /api/reminders/instances`);
+  console.log(`   PUT  /api/reminders/instances/:id`);
+  console.log(`   POST /api/reminders/instances/:id/complete`);
+  console.log(`   POST /api/reminders/instances/:id/ignore`);
+  console.log(`   POST /api/reminders/refresh`);
+  console.log(`   GET  /api/reminders/summary`);
+  console.log(`   GET  /api/reminders/type-labels`);
 });

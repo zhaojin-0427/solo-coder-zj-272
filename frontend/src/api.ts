@@ -24,6 +24,9 @@ import type {
   HealingReviewNote,
   HealingSuggestion,
   HealingProgressStats,
+  ReminderRule,
+  ReminderInstance,
+  ReminderSummary,
 } from './types';
 
 const api = axios.create({
@@ -195,4 +198,43 @@ export const healingApi = {
 
   getPlanProgress: (planId: string) =>
     api.get<HealingProgressStats>(`/healing/plans/${planId}/progress`).then(r => r.data),
+};
+
+export const remindersApi = {
+  getRules: () =>
+    api.get<ReminderRule[]>('/reminders/rules').then(r => r.data),
+  updateRules: (rules: ReminderRule[]) =>
+    api.put<ReminderRule[]>('/reminders/rules', rules).then(r => r.data),
+  updateRule: (id: string, updates: Partial<ReminderRule>) =>
+    api.put<ReminderRule>(`/reminders/rules/${id}`, updates).then(r => r.data),
+
+  getInstances: (params?: {
+    start?: string;
+    end?: string;
+    date?: string;
+    status?: string;
+    ruleType?: string;
+    ruleId?: string;
+    limit?: number;
+  }) =>
+    api.get<ReminderInstance[]>('/reminders/instances', { params }).then(r => r.data),
+  getInstanceDates: (params?: { start?: string; end?: string; status?: string }) =>
+    api.get<string[]>('/reminders/instances/dates', { params }).then(r => r.data),
+  getInstance: (id: string) =>
+    api.get<ReminderInstance>(`/reminders/instances/${id}`).then(r => r.data),
+  createInstance: (data: Partial<ReminderInstance>) =>
+    api.post<ReminderInstance>('/reminders/instances', data).then(r => r.data),
+  updateInstance: (id: string, data: Partial<ReminderInstance>) =>
+    api.put<ReminderInstance>(`/reminders/instances/${id}`, data).then(r => r.data),
+  completeInstance: (id: string) =>
+    api.post<ReminderInstance>(`/reminders/instances/${id}/complete`).then(r => r.data),
+  ignoreInstance: (id: string) =>
+    api.post<ReminderInstance>(`/reminders/instances/${id}/ignore`).then(r => r.data),
+
+  refresh: (params?: { date?: string; start?: string; end?: string }) =>
+    api.post<{ created: number; instances: ReminderInstance[] }>('/reminders/refresh', params || {}).then(r => r.data),
+  getSummary: () =>
+    api.get<ReminderSummary>('/reminders/summary').then(r => r.data),
+  getTypeLabels: () =>
+    api.get<Record<string, string>>('/reminders/type-labels').then(r => r.data),
 };

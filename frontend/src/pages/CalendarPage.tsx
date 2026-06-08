@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { entriesApi, cycleApi, insightsApi, healingApi } from '../api';
-import type { DiaryEntry, CycleInfo, HealingSuggestion } from '../types';
-import { MOOD_EMOJI, PHASE_NAMES, PHASE_COLORS, STICKER_EMOJI, HEALING_CATEGORY_EMOJI, HEALING_CATEGORY_LABELS, HEALING_CATEGORY_COLORS, PRIORITY_LABELS, SUGGESTION_SOURCE_LABELS } from '../types';
+import { entriesApi, cycleApi, insightsApi, healingApi, remindersApi } from '../api';
+import type { DiaryEntry, CycleInfo, HealingSuggestion, ReminderInstance } from '../types';
+import { MOOD_EMOJI, PHASE_NAMES, PHASE_COLORS, STICKER_EMOJI, HEALING_CATEGORY_EMOJI, HEALING_CATEGORY_LABELS, HEALING_CATEGORY_COLORS, PRIORITY_LABELS, SUGGESTION_SOURCE_LABELS, REMINDER_TYPE_LABELS, REMINDER_TYPE_COLORS } from '../types';
 import { formatLocalDate, todayStr } from '../utils/date';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -17,7 +17,9 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<DiaryEntry | null>(null);
   const [alertDates, setAlertDates] = useState<Set<string>>(new Set());
+  const [reminderDates, setReminderDates] = useState<Set<string>>(new Set());
   const [selectedDateSuggestions, setSelectedDateSuggestions] = useState<HealingSuggestion[]>([]);
+  const [selectedDateReminders, setSelectedDateReminders] = useState<ReminderInstance[]>([]);
 
   const { start, end } = useMemo(() => {
     const s = new Date(year, month, 1, 12, 0, 0);
@@ -37,21 +39,27 @@ export default function CalendarPage() {
       healingApi.getTodaySuggestions(selectedDate)
         .then(setSelectedDateSuggestions)
         .catch(() => setSelectedDateSuggestions([]));
+      remindersApi.getInstances({ date: selectedDate })
+        .then(setSelectedDateReminders)
+        .catch(() => setSelectedDateReminders([]));
     } else {
       setSelectedDateSuggestions([]);
+      setSelectedDateReminders([]);
     }
   }, [selectedDate]);
 
   async function loadData() {
     try {
-      const [list, cycle, alerts] = await Promise.all([
+      const [list, cycle, alerts, reminders] = await Promise.all([
         entriesApi.getAll({ start, end }),
         cycleApi.get(),
         insightsApi.getAlertDates(),
+        remindersApi.getInstanceDates({ start, end }),
       ]);
       setEntries(list);
       setCycleInfo(cycle);
       setAlertDates(new Set(alerts));
+      setReminderDates(new Set(reminders));
     } catch (e) {
       console.error(e);
     }
@@ -149,6 +157,7 @@ export default function CalendarPage() {
               const isToday = dateStr === today;
               const isSelected = dateStr === selectedDate;
               const hasAlert = alertDates.has(dateStr);
+              const hasReminder = reminderDates.has(dateStr);
               return (
                 <div
                   key={dateStr}
@@ -173,6 +182,9 @@ export default function CalendarPage() {
                   )}
                   {hasAlert && !entry?.isSpecialEvent && (
                     <span style={{ position: 'absolute', top: 2, right: 4, fontSize: '0.7em' }}>🔔</span>
+                  )}
+                  {hasReminder && !hasAlert && !entry?.isSpecialEvent && (
+                    <span style={{ position: 'absolute', top: 2, right: 4, fontSize: '0.7em' }}>⏰</span>
                   )}
                 </div>
               );
@@ -199,6 +211,10 @@ export default function CalendarPage() {
             <div className="legend-item">
               <span style={{ fontSize: '0.9em' }}>🔔</span>
               预警日期
+            </div>
+            <div className="legend-item">
+              <span style={{ fontSize: '0.9em' }}>⏰</span>
+              有提醒
             </div>
           </div>
         </div>
@@ -279,6 +295,63 @@ export default function CalendarPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {selectedDateReminders.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <h3 className="card-title" style={{ marginBottom: 12 }}>⏰ 当日提醒</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {selectedDateReminders.map(r => (
+                  <div
+                    key={r.id}
+                    style={{
+                      padding: 12,
+                      borderRadius: 12,
+                      background: `${REMINDER_TYPE_COLORS[r.ruleType]}15`,
+                      borderLeft: `3px solid ${REMINDER_TYPE_COLORS[r.ruleType]}`,
+                      opacity: r.status !== 'pending' ? 0.6 : 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.8em', color: REMINDER_TYPE_COLORS[r.ruleType], fontWeight: 500 }}>
+                        {REMINDER_TYPE_LABELS[r.ruleType]}
+                      </span>
+                      <span style={{ fontSize: '0.75em', color: '#9a7b8d' }}>⏰ {r.triggerTime}</span>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 10,
+                          fontSize: '0.7em',
+                          fontWeight: 500,
+                          background:
+                            r.status === 'completed'
+                              ? 'rgba(129,199,132,0.18)'
+                              : r.status === 'ignored'
+                              ? 'rgba(158,158,158,0.18)'
+                              : 'rgba(255,183,77,0.18)',
+                          color:
+                            r.status === 'completed'
+                              ? '#388e3c'
+                              : r.status === 'ignored'
+                              ? '#757575'
+                              : '#f57c00',
+                        }}
+                      >
+                        {r.status === 'completed' ? '已完成' : r.status === 'ignored' ? '已忽略' : '待处理'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.95em', fontWeight: 500, color: '#4a2c3d', marginBottom: 2 }}>
+                      {r.title}
+                    </div>
+                    {r.description && (
+                      <div style={{ fontSize: '0.85em', color: '#7a5c6f', lineHeight: 1.5 }}>
+                        {r.description}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { entriesApi, uploadApi, cycleApi, sharingApi, healingApi } from '../api';
-import type { DiaryEntry, StickerType, Visibility, CycleInfo, HealingSuggestion } from '../types';
-import { MOOD_EMOJI, STICKER_EMOJI, PHASE_NAMES, PHASE_COLORS, HEALING_CATEGORY_EMOJI, HEALING_CATEGORY_LABELS, HEALING_CATEGORY_COLORS, PRIORITY_LABELS, SUGGESTION_SOURCE_LABELS } from '../types';
+import { entriesApi, uploadApi, cycleApi, sharingApi, healingApi, remindersApi } from '../api';
+import type { DiaryEntry, StickerType, Visibility, CycleInfo, HealingSuggestion, ReminderInstance } from '../types';
+import { MOOD_EMOJI, STICKER_EMOJI, PHASE_NAMES, PHASE_COLORS, HEALING_CATEGORY_EMOJI, HEALING_CATEGORY_LABELS, HEALING_CATEGORY_COLORS, PRIORITY_LABELS, SUGGESTION_SOURCE_LABELS, REMINDER_TYPE_COLORS, REMINDER_TYPE_LABELS } from '../types';
 import { todayStr } from '../utils/date';
 
 const PRESET_KEYWORDS = [
@@ -37,6 +37,7 @@ export default function DailyRecordPage() {
   const [privateNote, setPrivateNote] = useState('');
   const [privateNoteSaved, setPrivateNoteSaved] = useState(false);
   const [todaySuggestions, setTodaySuggestions] = useState<HealingSuggestion[]>([]);
+  const [todayReminders, setTodayReminders] = useState<ReminderInstance[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -45,11 +46,13 @@ export default function DailyRecordPage() {
 
   async function loadData() {
     try {
-      const [entry, cycle, suggestions] = await Promise.all([
+      const [entry, cycle, suggestions, reminders] = await Promise.all([
         entriesApi.getByDate(date),
         cycleApi.get(),
         healingApi.getTodaySuggestions(date).catch(() => [] as HealingSuggestion[]),
+        remindersApi.getInstances({ date, status: 'pending' }).catch(() => [] as ReminderInstance[]),
       ]);
+      setTodayReminders(reminders);
       setTodaySuggestions(suggestions);
       setCycleInfo(cycle);
       if (entry) {
@@ -360,6 +363,49 @@ export default function DailyRecordPage() {
       </div>
 
       <div className="col">
+        {todayReminders.length > 0 && (
+          <div className="card" style={{ marginBottom: 16 }}>
+            <h2 className="card-title">🔔 今日提醒</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {todayReminders.map(r => (
+                <div
+                  key={r.id}
+                  style={{
+                    padding: 12,
+                    borderRadius: 12,
+                    background: `${REMINDER_TYPE_COLORS[r.ruleType]}15`,
+                    borderLeft: `3px solid ${REMINDER_TYPE_COLORS[r.ruleType]}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.8em', color: REMINDER_TYPE_COLORS[r.ruleType], fontWeight: 500 }}>
+                      {REMINDER_TYPE_LABELS[r.ruleType]}
+                    </span>
+                    <span style={{ fontSize: '0.75em', color: '#9a7b8d' }}>⏰ {r.triggerTime}</span>
+                  </div>
+                  <div style={{ fontSize: '0.95em', fontWeight: 500, color: '#4a2c3d', marginBottom: 2 }}>
+                    {r.title}
+                  </div>
+                  {r.description && (
+                    <div style={{ fontSize: '0.85em', color: '#7a5c6f', lineHeight: 1.5 }}>
+                      {r.description}
+                    </div>
+                  )}
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn-primary"
+                      style={{ padding: '5px 14px', fontSize: '0.8em' }}
+                      onClick={() => navigate('/reminders')}
+                    >
+                      查看全部 →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {todaySuggestions.length > 0 && (
           <div className="card" style={{ marginBottom: 16 }}>
             <h2 className="card-title">💚 今日疗愈建议</h2>
