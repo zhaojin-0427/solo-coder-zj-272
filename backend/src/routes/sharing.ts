@@ -44,7 +44,7 @@ function applyFieldVisibility(
   visibility: FieldVisibility,
   desensitize: boolean
 ): Partial<DiaryEntry> {
-  const result: Partial<DiaryEntry> = { date: entry.date };
+  const result: Partial<DiaryEntry> = { id: entry.id, date: entry.date };
   if (visibility.moodScore) result.moodScore = entry.moodScore;
   if (visibility.keywords) result.keywords = entry.keywords;
   if (visibility.notes) {

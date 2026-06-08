@@ -708,8 +708,8 @@ export default function SharingCenterPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {selectedSpace.entries.map((entry, idx) => {
-                      const fullEntry = entry as Partial<DiaryEntry> & { date: string };
-                      const privateNote = selectedSpace.privateNotes[selectedSpace.entries[idx] && (selectedSpace.entries[idx] as any).id ? (selectedSpace.entries[idx] as any).id : ''];
+                      const fullEntry = entry as Partial<DiaryEntry> & { id?: string; date: string };
+                      const privateNote = fullEntry.id ? selectedSpace.privateNotes[fullEntry.id] : undefined;
                       return (
                         <div key={idx} className="entry-preview">
                           <div className="entry-preview-date">📅 {fullEntry.date}</div>
