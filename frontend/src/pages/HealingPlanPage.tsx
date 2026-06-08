@@ -169,7 +169,11 @@ export default function HealingPlanPage() {
 
   async function handleActionStatusChange(actionId: string, status: HealingActionStatus) {
     try {
-      await healingApi.updateAction(actionId, { status });
+      if (status === 'completed') {
+        await healingApi.completeAction(actionId, { date: today, completed: true });
+      } else {
+        await healingApi.updateAction(actionId, { status, completedAt: undefined });
+      }
       if (selectedPlan) await selectPlan(selectedPlan.id);
     } catch (e) {
       console.error('Status change error:', e);

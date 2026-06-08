@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { entriesApi, cycleApi, insightsApi, healingApi } from '../api';
 import type { DiaryEntry, CycleInfo, HealingSuggestion } from '../types';
 import { MOOD_EMOJI, PHASE_NAMES, PHASE_COLORS, STICKER_EMOJI, HEALING_CATEGORY_EMOJI, HEALING_CATEGORY_LABELS, HEALING_CATEGORY_COLORS, PRIORITY_LABELS, SUGGESTION_SOURCE_LABELS } from '../types';
@@ -7,6 +8,7 @@ import { formatLocalDate, todayStr } from '../utils/date';
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
 export default function CalendarPage() {
+  const navigate = useNavigate();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -218,9 +220,7 @@ export default function CalendarPage() {
               <button
                 className="btn btn-primary"
                 style={{ marginTop: 16 }}
-                onClick={() => {
-                  window.location.hash = '#/';
-                }}
+                onClick={() => navigate('/')}
               >
                 去记录
               </button>

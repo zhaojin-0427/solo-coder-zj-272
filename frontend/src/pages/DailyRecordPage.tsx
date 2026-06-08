@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { entriesApi, uploadApi, cycleApi, sharingApi, healingApi } from '../api';
 import type { DiaryEntry, StickerType, Visibility, CycleInfo, HealingSuggestion } from '../types';
 import { MOOD_EMOJI, STICKER_EMOJI, PHASE_NAMES, PHASE_COLORS, HEALING_CATEGORY_EMOJI, HEALING_CATEGORY_LABELS, HEALING_CATEGORY_COLORS, PRIORITY_LABELS, SUGGESTION_SOURCE_LABELS } from '../types';
@@ -18,6 +19,7 @@ const ALL_STICKERS: StickerType[] = [
 ];
 
 export default function DailyRecordPage() {
+  const navigate = useNavigate();
   const today = todayStr();
   const [date, setDate] = useState(today);
   const [moodScore, setMoodScore] = useState<number>(6);
@@ -385,7 +387,7 @@ export default function DailyRecordPage() {
             <button
               className="btn btn-secondary"
               style={{ width: '100%', marginTop: 12, padding: '8px', fontSize: '0.9em' }}
-              onClick={() => { window.location.hash = '#/healing'; }}
+              onClick={() => navigate('/healing')}
             >
               查看完整疗愈计划 →
             </button>

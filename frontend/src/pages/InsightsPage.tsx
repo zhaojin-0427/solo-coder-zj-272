@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { insightsApi, healingApi } from '../api';
 import type {
   InsightAlert,
@@ -69,6 +70,7 @@ const THRESHOLD_LABELS: Record<string, Record<string, string>> = {
 };
 
 export default function InsightsPage() {
+  const navigate = useNavigate();
   const [range, setRange] = useState<TimeRange>('30');
   const [filterSeverity, setFilterSeverity] = useState<FilterSeverity>('all');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -264,7 +266,7 @@ export default function InsightsPage() {
             <button
               className="btn btn-secondary"
               style={{ width: '100%', marginTop: 12, padding: '8px', fontSize: '0.9em' }}
-              onClick={() => { window.location.hash = '#/healing'; }}
+              onClick={() => navigate('/healing')}
             >
               查看完整疗愈计划 →
             </button>
