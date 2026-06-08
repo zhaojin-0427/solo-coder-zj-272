@@ -8,6 +8,15 @@ import type {
   InsightRuleConfig,
   InsightAlert,
   InsightSummary,
+  TrustedContact,
+  ShareSpace,
+  ShareSpaceWithStats,
+  ShareLink,
+  ShareAuditLog,
+  ShareFeedback,
+  EntryPrivateNote,
+  ShareSpaceDetail,
+  PublicShareData,
 } from './types';
 
 const api = axios.create({
@@ -80,4 +89,48 @@ export const insightsApi = {
     api.get<InsightSummary>('/insights/summary', { params }).then(r => r.data),
   analyze: () =>
     api.post<{ alerts: InsightAlert[]; summary: InsightSummary }>('/insights/analyze').then(r => r.data),
+};
+
+export const sharingApi = {
+  getContacts: () =>
+    api.get<TrustedContact[]>('/sharing/contacts').then(r => r.data),
+  createContact: (data: Partial<TrustedContact>) =>
+    api.post<TrustedContact>('/sharing/contacts', data).then(r => r.data),
+  updateContact: (id: string, data: Partial<TrustedContact>) =>
+    api.put<TrustedContact>(`/sharing/contacts/${id}`, data).then(r => r.data),
+  deleteContact: (id: string) =>
+    api.delete(`/sharing/contacts/${id}`).then(r => r.data),
+
+  getSpaces: () =>
+    api.get<ShareSpaceWithStats[]>('/sharing/spaces').then(r => r.data),
+  getSpaceDetail: (id: string) =>
+    api.get<ShareSpaceDetail>(`/sharing/spaces/${id}`).then(r => r.data),
+  createSpace: (data: Partial<ShareSpace>) =>
+    api.post<ShareSpace>('/sharing/spaces', data).then(r => r.data),
+  updateSpace: (id: string, data: Partial<ShareSpace>) =>
+    api.put<ShareSpace>(`/sharing/spaces/${id}`, data).then(r => r.data),
+  deleteSpace: (id: string) =>
+    api.delete(`/sharing/spaces/${id}`).then(r => r.data),
+
+  createLink: (spaceId: string, data?: { expiresAt?: string; maxVisits?: number }) =>
+    api.post<ShareLink>(`/sharing/spaces/${spaceId}/links`, data || {}).then(r => r.data),
+  revokeLink: (id: string) =>
+    api.post<ShareLink>(`/sharing/links/${id}/revoke`).then(r => r.data),
+
+  getAuditLogs: (spaceId: string) =>
+    api.get<ShareAuditLog[]>(`/sharing/spaces/${spaceId}/audit`).then(r => r.data),
+  getFeedbacks: (spaceId: string) =>
+    api.get<ShareFeedback[]>(`/sharing/spaces/${spaceId}/feedbacks`).then(r => r.data),
+
+  getPrivateNote: (entryId: string) =>
+    api.get<EntryPrivateNote>(`/sharing/notes/${entryId}`).then(r => r.data),
+  savePrivateNote: (entryId: string, note: string) =>
+    api.put<EntryPrivateNote>(`/sharing/notes/${entryId}`, { note }).then(r => r.data),
+  deletePrivateNote: (entryId: string) =>
+    api.delete(`/sharing/notes/${entryId}`).then(r => r.data),
+
+  getPublicShare: (token: string) =>
+    api.get<PublicShareData>(`/sharing/public/${token}`).then(r => r.data),
+  submitFeedback: (token: string, visitorName: string, message: string) =>
+    api.post<ShareFeedback>(`/sharing/public/${token}/feedback`, { visitorName, message }).then(r => r.data),
 };

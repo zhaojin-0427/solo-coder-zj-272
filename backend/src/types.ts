@@ -154,3 +154,85 @@ export const NEGATIVE_KEYWORDS = [
   '迷茫', '生气', '难过', 'emo', '低落', '郁闷',
   '紧张', '不安', '伤心', '沮丧', '抑郁', '痛苦',
 ];
+
+export type ContactType = 'trusted' | 'doctor' | 'counselor';
+
+export interface TrustedContact {
+  id: string;
+  name: string;
+  type: ContactType;
+  email?: string;
+  phone?: string;
+  note?: string;
+  createdAt: string;
+}
+
+export type ShareFieldKey =
+  | 'moodScore'
+  | 'keywords'
+  | 'notes'
+  | 'photos'
+  | 'cyclePhase'
+  | 'specialEvent'
+  | 'insights';
+
+export interface FieldVisibility {
+  moodScore: boolean;
+  keywords: boolean;
+  notes: boolean;
+  photos: boolean;
+  cyclePhase: boolean;
+  specialEvent: boolean;
+  insights: boolean;
+}
+
+export interface ShareSpace {
+  id: string;
+  name: string;
+  description?: string;
+  contactIds: string[];
+  startDate: string;
+  endDate: string;
+  fieldVisibility: FieldVisibility;
+  desensitizeNotes: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShareLink {
+  id: string;
+  spaceId: string;
+  token: string;
+  expiresAt: string | null;
+  maxVisits: number | null;
+  visitCount: number;
+  createdAt: string;
+  revokedAt: string | null;
+  isActive: boolean;
+}
+
+export interface ShareAuditLog {
+  id: string;
+  spaceId: string;
+  linkId: string;
+  visitorName?: string;
+  action: 'view' | 'feedback';
+  ip?: string;
+  userAgent?: string;
+  timestamp: string;
+}
+
+export interface ShareFeedback {
+  id: string;
+  spaceId: string;
+  linkId: string;
+  visitorName: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface EntryPrivateNote {
+  entryId: string;
+  note: string;
+  updatedAt: string;
+}

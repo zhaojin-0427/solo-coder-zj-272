@@ -151,3 +151,137 @@ export const MOOD_EMOJI: Record<number, string> = {
   5: '😐', 6: '🙂', 7: '😊', 8: '😄',
   9: '🥰', 10: '🤩',
 };
+
+export type ContactType = 'trusted' | 'doctor' | 'counselor';
+
+export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
+  trusted: '🤝 可信联系人',
+  doctor: '🏥 医生',
+  counselor: '💆 心理咨询师',
+};
+
+export const CONTACT_TYPE_EMOJI: Record<ContactType, string> = {
+  trusted: '🤝',
+  doctor: '🏥',
+  counselor: '💆',
+};
+
+export interface TrustedContact {
+  id: string;
+  name: string;
+  type: ContactType;
+  email?: string;
+  phone?: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface FieldVisibility {
+  moodScore: boolean;
+  keywords: boolean;
+  notes: boolean;
+  photos: boolean;
+  cyclePhase: boolean;
+  specialEvent: boolean;
+  insights: boolean;
+}
+
+export const FIELD_LABELS: Record<keyof FieldVisibility, string> = {
+  moodScore: '心情评分',
+  keywords: '关键词标签',
+  notes: '文字日记',
+  photos: '照片',
+  cyclePhase: '周期阶段',
+  specialEvent: '特殊事件',
+  insights: '洞察预警',
+};
+
+export const FIELD_EMOJI: Record<keyof FieldVisibility, string> = {
+  moodScore: '😊',
+  keywords: '🏷️',
+  notes: '📝',
+  photos: '📷',
+  cyclePhase: '🌙',
+  specialEvent: '🎉',
+  insights: '🔮',
+};
+
+export interface ShareSpace {
+  id: string;
+  name: string;
+  description?: string;
+  contactIds: string[];
+  startDate: string;
+  endDate: string;
+  fieldVisibility: FieldVisibility;
+  desensitizeNotes: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShareSpaceWithStats extends ShareSpace {
+  links: ShareLink[];
+  feedbackCount: number;
+  auditCount: number;
+}
+
+export interface ShareLink {
+  id: string;
+  spaceId: string;
+  token: string;
+  expiresAt: string | null;
+  maxVisits: number | null;
+  visitCount: number;
+  createdAt: string;
+  revokedAt: string | null;
+  isActive: boolean;
+}
+
+export interface ShareAuditLog {
+  id: string;
+  spaceId: string;
+  linkId: string;
+  visitorName?: string;
+  action: 'view' | 'feedback';
+  ip?: string;
+  userAgent?: string;
+  timestamp: string;
+}
+
+export interface ShareFeedback {
+  id: string;
+  spaceId: string;
+  linkId: string;
+  visitorName: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface EntryPrivateNote {
+  entryId: string;
+  note: string;
+  updatedAt: string;
+}
+
+export interface ShareSpaceDetail {
+  space: ShareSpace;
+  contacts: TrustedContact[];
+  links: ShareLink[];
+  feedbacks: ShareFeedback[];
+  audits: ShareAuditLog[];
+  entries: Partial<DiaryEntry>[];
+  alerts: InsightAlert[];
+  privateNotes: Record<string, string>;
+}
+
+export interface PublicShareData {
+  space: {
+    id: string;
+    name: string;
+    description?: string;
+    startDate: string;
+    endDate: string;
+  };
+  entries: Partial<DiaryEntry>[];
+  alerts: InsightAlert[];
+}

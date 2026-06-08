@@ -6,6 +6,12 @@ import {
   InsightRuleConfig,
   InsightAlert,
   DEFAULT_INSIGHT_RULES,
+  TrustedContact,
+  ShareSpace,
+  ShareLink,
+  ShareAuditLog,
+  ShareFeedback,
+  EntryPrivateNote,
 } from './types';
 import { getDefaultCycleInfo } from './utils/cycle';
 
@@ -14,6 +20,12 @@ const ENTRIES_FILE = path.join(DATA_DIR, 'entries.json');
 const CYCLE_FILE = path.join(DATA_DIR, 'cycle.json');
 const INSIGHT_RULES_FILE = path.join(DATA_DIR, 'insight-rules.json');
 const INSIGHT_ALERTS_FILE = path.join(DATA_DIR, 'insight-alerts.json');
+const CONTACTS_FILE = path.join(DATA_DIR, 'contacts.json');
+const SHARE_SPACES_FILE = path.join(DATA_DIR, 'share-spaces.json');
+const SHARE_LINKS_FILE = path.join(DATA_DIR, 'share-links.json');
+const SHARE_AUDIT_FILE = path.join(DATA_DIR, 'share-audit.json');
+const SHARE_FEEDBACK_FILE = path.join(DATA_DIR, 'share-feedback.json');
+const PRIVATE_NOTES_FILE = path.join(DATA_DIR, 'private-notes.json');
 
 function ensureDataDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
@@ -317,4 +329,280 @@ export function createInsightAlert(alert: Omit<InsightAlert, 'id' | 'createdAt'>
   alerts.push(newAlert);
   writeInsightAlerts(alerts);
   return newAlert;
+}
+
+function readContacts(): TrustedContact[] {
+  const defaultValue = { contacts: [] as TrustedContact[] };
+  const data = readJSONFile<{ contacts: TrustedContact[] }>(CONTACTS_FILE, defaultValue);
+  if (!fs.existsSync(CONTACTS_FILE)) {
+    writeJSONFile(CONTACTS_FILE, data);
+  }
+  return data.contacts;
+}
+
+function writeContacts(contacts: TrustedContact[]): void {
+  writeJSONFile(CONTACTS_FILE, { contacts });
+}
+
+export function getAllContacts(): TrustedContact[] {
+  return readContacts().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function createContact(data: Omit<TrustedContact, 'id' | 'createdAt'>): TrustedContact {
+  const contacts = readContacts();
+  const contact: TrustedContact = {
+    ...data,
+    id: `contact_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+  };
+  contacts.push(contact);
+  writeContacts(contacts);
+  return contact;
+}
+
+export function updateContact(id: string, updates: Partial<TrustedContact>): TrustedContact | undefined {
+  const contacts = readContacts();
+  const idx = contacts.findIndex(c => c.id === id);
+  if (idx >= 0) {
+    contacts[idx] = { ...contacts[idx], ...updates };
+    writeContacts(contacts);
+    return contacts[idx];
+  }
+  return undefined;
+}
+
+export function deleteContact(id: string): boolean {
+  const contacts = readContacts();
+  const idx = contacts.findIndex(c => c.id === id);
+  if (idx >= 0) {
+    contacts.splice(idx, 1);
+    writeContacts(contacts);
+    return true;
+  }
+  return false;
+}
+
+function readShareSpaces(): ShareSpace[] {
+  const defaultValue = { spaces: [] as ShareSpace[] };
+  const data = readJSONFile<{ spaces: ShareSpace[] }>(SHARE_SPACES_FILE, defaultValue);
+  if (!fs.existsSync(SHARE_SPACES_FILE)) {
+    writeJSONFile(SHARE_SPACES_FILE, data);
+  }
+  return data.spaces;
+}
+
+function writeShareSpaces(spaces: ShareSpace[]): void {
+  writeJSONFile(SHARE_SPACES_FILE, { spaces });
+}
+
+export function getAllShareSpaces(): ShareSpace[] {
+  return readShareSpaces().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function getShareSpaceById(id: string): ShareSpace | undefined {
+  return readShareSpaces().find(s => s.id === id);
+}
+
+export function createShareSpace(data: Omit<ShareSpace, 'id' | 'createdAt' | 'updatedAt'>): ShareSpace {
+  const spaces = readShareSpaces();
+  const now = new Date().toISOString();
+  const space: ShareSpace = {
+    ...data,
+    id: `space_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+  spaces.push(space);
+  writeShareSpaces(spaces);
+  return space;
+}
+
+export function updateShareSpace(id: string, updates: Partial<ShareSpace>): ShareSpace | undefined {
+  const spaces = readShareSpaces();
+  const idx = spaces.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    spaces[idx] = { ...spaces[idx], ...updates, updatedAt: new Date().toISOString() };
+    writeShareSpaces(spaces);
+    return spaces[idx];
+  }
+  return undefined;
+}
+
+export function deleteShareSpace(id: string): boolean {
+  const spaces = readShareSpaces();
+  const idx = spaces.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    spaces.splice(idx, 1);
+    writeShareSpaces(spaces);
+    const links = readShareLinks().filter(l => l.spaceId !== id);
+    writeShareLinks(links);
+    const audits = readAuditLogs().filter(a => a.spaceId !== id);
+    writeAuditLogs(audits);
+    const feedbacks = readFeedbacks().filter(f => f.spaceId !== id);
+    writeFeedbacks(feedbacks);
+    return true;
+  }
+  return false;
+}
+
+function readShareLinks(): ShareLink[] {
+  const defaultValue = { links: [] as ShareLink[] };
+  const data = readJSONFile<{ links: ShareLink[] }>(SHARE_LINKS_FILE, defaultValue);
+  if (!fs.existsSync(SHARE_LINKS_FILE)) {
+    writeJSONFile(SHARE_LINKS_FILE, data);
+  }
+  return data.links;
+}
+
+function writeShareLinks(links: ShareLink[]): void {
+  writeJSONFile(SHARE_LINKS_FILE, { links });
+}
+
+export function getLinksBySpaceId(spaceId: string): ShareLink[] {
+  return readShareLinks().filter(l => l.spaceId === spaceId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function getShareLinkByToken(token: string): ShareLink | undefined {
+  return readShareLinks().find(l => l.token === token);
+}
+
+export function createShareLink(data: Omit<ShareLink, 'id' | 'token' | 'visitCount' | 'createdAt' | 'revokedAt' | 'isActive'>): ShareLink {
+  const links = readShareLinks();
+  const link: ShareLink = {
+    ...data,
+    id: `link_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    token: Math.random().toString(36).slice(2, 15) + Math.random().toString(36).slice(2, 15),
+    visitCount: 0,
+    createdAt: new Date().toISOString(),
+    revokedAt: null,
+    isActive: true,
+  };
+  links.push(link);
+  writeShareLinks(links);
+  return link;
+}
+
+export function revokeShareLink(id: string): ShareLink | undefined {
+  const links = readShareLinks();
+  const idx = links.findIndex(l => l.id === id);
+  if (idx >= 0) {
+    links[idx] = { ...links[idx], isActive: false, revokedAt: new Date().toISOString() };
+    writeShareLinks(links);
+    return links[idx];
+  }
+  return undefined;
+}
+
+export function incrementLinkVisit(token: string): ShareLink | undefined {
+  const links = readShareLinks();
+  const idx = links.findIndex(l => l.token === token);
+  if (idx >= 0) {
+    links[idx] = { ...links[idx], visitCount: links[idx].visitCount + 1 };
+    writeShareLinks(links);
+    return links[idx];
+  }
+  return undefined;
+}
+
+function readAuditLogs(): ShareAuditLog[] {
+  const defaultValue = { logs: [] as ShareAuditLog[] };
+  const data = readJSONFile<{ logs: ShareAuditLog[] }>(SHARE_AUDIT_FILE, defaultValue);
+  if (!fs.existsSync(SHARE_AUDIT_FILE)) {
+    writeJSONFile(SHARE_AUDIT_FILE, data);
+  }
+  return data.logs;
+}
+
+function writeAuditLogs(logs: ShareAuditLog[]): void {
+  writeJSONFile(SHARE_AUDIT_FILE, { logs });
+}
+
+export function getAuditLogsBySpaceId(spaceId: string): ShareAuditLog[] {
+  return readAuditLogs().filter(a => a.spaceId === spaceId).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+}
+
+export function createAuditLog(data: Omit<ShareAuditLog, 'id' | 'timestamp'>): ShareAuditLog {
+  const logs = readAuditLogs();
+  const log: ShareAuditLog = {
+    ...data,
+    id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: new Date().toISOString(),
+  };
+  logs.push(log);
+  writeAuditLogs(logs);
+  return log;
+}
+
+function readFeedbacks(): ShareFeedback[] {
+  const defaultValue = { feedbacks: [] as ShareFeedback[] };
+  const data = readJSONFile<{ feedbacks: ShareFeedback[] }>(SHARE_FEEDBACK_FILE, defaultValue);
+  if (!fs.existsSync(SHARE_FEEDBACK_FILE)) {
+    writeJSONFile(SHARE_FEEDBACK_FILE, data);
+  }
+  return data.feedbacks;
+}
+
+function writeFeedbacks(feedbacks: ShareFeedback[]): void {
+  writeJSONFile(SHARE_FEEDBACK_FILE, { feedbacks });
+}
+
+export function getFeedbacksBySpaceId(spaceId: string): ShareFeedback[] {
+  return readFeedbacks().filter(f => f.spaceId === spaceId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function createFeedback(data: Omit<ShareFeedback, 'id' | 'createdAt'>): ShareFeedback {
+  const feedbacks = readFeedbacks();
+  const fb: ShareFeedback = {
+    ...data,
+    id: `fb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+  };
+  feedbacks.push(fb);
+  writeFeedbacks(feedbacks);
+  return fb;
+}
+
+function readPrivateNotes(): EntryPrivateNote[] {
+  const defaultValue = { notes: [] as EntryPrivateNote[] };
+  const data = readJSONFile<{ notes: EntryPrivateNote[] }>(PRIVATE_NOTES_FILE, defaultValue);
+  if (!fs.existsSync(PRIVATE_NOTES_FILE)) {
+    writeJSONFile(PRIVATE_NOTES_FILE, data);
+  }
+  return data.notes;
+}
+
+function writePrivateNotes(notes: EntryPrivateNote[]): void {
+  writeJSONFile(PRIVATE_NOTES_FILE, { notes });
+}
+
+export function getPrivateNote(entryId: string): EntryPrivateNote | undefined {
+  return readPrivateNotes().find(n => n.entryId === entryId);
+}
+
+export function getAllPrivateNotes(): EntryPrivateNote[] {
+  return readPrivateNotes();
+}
+
+export function savePrivateNote(entryId: string, note: string): EntryPrivateNote {
+  const notes = readPrivateNotes();
+  const idx = notes.findIndex(n => n.entryId === entryId);
+  const pn: EntryPrivateNote = { entryId, note, updatedAt: new Date().toISOString() };
+  if (idx >= 0) {
+    notes[idx] = pn;
+  } else {
+    notes.push(pn);
+  }
+  writePrivateNotes(notes);
+  return pn;
+}
+
+export function deletePrivateNote(entryId: string): boolean {
+  const notes = readPrivateNotes();
+  const idx = notes.findIndex(n => n.entryId === entryId);
+  if (idx >= 0) {
+    notes.splice(idx, 1);
+    writePrivateNotes(notes);
+    return true;
+  }
+  return false;
 }

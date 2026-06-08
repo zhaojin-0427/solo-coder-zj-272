@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { entriesApi, uploadApi, cycleApi } from '../api';
+import { entriesApi, uploadApi, cycleApi, sharingApi } from '../api';
 import type { DiaryEntry, StickerType, Visibility, CycleInfo } from '../types';
 import { MOOD_EMOJI, STICKER_EMOJI, PHASE_NAMES, PHASE_COLORS } from '../types';
 import { todayStr } from '../utils/date';
@@ -32,6 +32,8 @@ export default function DailyRecordPage() {
   const [existingEntry, setExistingEntry] = useState<DiaryEntry | null>(null);
   const [cycleInfo, setCycleInfo] = useState<CycleInfo | null>(null);
   const [savedMsg, setSavedMsg] = useState('');
+  const [privateNote, setPrivateNote] = useState('');
+  const [privateNoteSaved, setPrivateNoteSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -55,6 +57,12 @@ export default function DailyRecordPage() {
         setVisibility(entry.visibility);
         setIsSpecialEvent(entry.isSpecialEvent);
         setSpecialEventTitle(entry.specialEventTitle || '');
+        try {
+          const pn = await sharingApi.getPrivateNote(entry.id);
+          setPrivateNote(pn.note || '');
+        } catch {
+          setPrivateNote('');
+        }
       } else {
         setExistingEntry(null);
         setMoodScore(6);
@@ -65,9 +73,22 @@ export default function DailyRecordPage() {
         setVisibility('private');
         setIsSpecialEvent(false);
         setSpecialEventTitle('');
+        setPrivateNote('');
       }
+      setPrivateNoteSaved(false);
     } catch (e) {
       console.error('Load data error:', e);
+    }
+  }
+
+  async function handleSavePrivateNote() {
+    if (!existingEntry) return;
+    try {
+      await sharingApi.savePrivateNote(existingEntry.id, privateNote);
+      setPrivateNoteSaved(true);
+      setTimeout(() => setPrivateNoteSaved(false), 2000);
+    } catch (e) {
+      console.error('Save private note error:', e);
     }
   }
 
@@ -292,6 +313,35 @@ export default function DailyRecordPage() {
             )}
           </div>
 
+          {existingEntry && (
+            <div className="form-group">
+              <label>
+                🔒 私密备注
+                <span style={{ fontSize: '0.8em', color: '#9a7b8d', marginLeft: 6, fontWeight: 'normal' }}>
+                  （仅自己可见，不会被分享）
+                </span>
+              </label>
+              <textarea
+                placeholder="写下只有你自己知道的心里话..."
+                value={privateNote}
+                onChange={e => { setPrivateNote(e.target.value); setPrivateNoteSaved(false); }}
+                style={{ minHeight: 80 }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                <span style={{ fontSize: '0.8em', color: privateNoteSaved ? '#81C784' : '#9a7b8d' }}>
+                  {privateNoteSaved ? '✅ 已保存' : '私密备注单独保存'}
+                </span>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '8px 18px', fontSize: '0.85em' }}
+                  onClick={handleSavePrivateNote}
+                >
+                  💾 保存备注
+                </button>
+              </div>
+            </div>
+          )}
+
           {savedMsg && (
             <div style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(129,199,132,0.15)', color: '#388e3c', marginBottom: 16, textAlign: 'center' }}>
               {savedMsg}
@@ -351,6 +401,22 @@ export default function DailyRecordPage() {
                 {photos.map((p, i) => (
                   <img key={i} src={p} alt="" />
                 ))}
+              </div>
+            )}
+            {privateNote && (
+              <div style={{
+                marginTop: 14,
+                padding: 12,
+                borderRadius: 12,
+                background: 'rgba(255,183,77,0.12)',
+                border: '1px dashed rgba(255,183,77,0.4)',
+              }}>
+                <div style={{ fontSize: '0.85em', color: '#f57c00', fontWeight: 500, marginBottom: 4 }}>
+                  🔒 私密备注（仅自己可见）
+                </div>
+                <p style={{ fontSize: '0.9em', color: '#4a2c3d', margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                  {privateNote}
+                </p>
               </div>
             )}
           </div>
