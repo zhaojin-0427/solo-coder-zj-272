@@ -125,6 +125,8 @@ export default function InsightsPage() {
     try {
       const updated = await insightsApi.updateRule(rule.type, { enabled: !rule.enabled });
       setRules(prev => prev.map(r => r.type === rule.type ? updated : r));
+      await insightsApi.refreshAlerts();
+      await loadData();
     } catch (e) {
       console.error(e);
     }
@@ -140,6 +142,8 @@ export default function InsightsPage() {
       const newThresholds = { ...rule.thresholds, [key]: value };
       const updated = await insightsApi.updateRule(rule.type, { thresholds: newThresholds });
       setRules(prev => prev.map(r => r.type === rule.type ? updated : r));
+      await insightsApi.refreshAlerts();
+      await loadData();
     } catch (e) {
       console.error(e);
     } finally {

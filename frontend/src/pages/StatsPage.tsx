@@ -4,8 +4,9 @@ import {
   ResponsiveContainer, BarChart, Bar, Cell, Legend, ReferenceLine
 } from 'recharts';
 import { statsApi, cycleApi, entriesApi, insightsApi } from '../api';
-import type { PhaseMoodStats, MoodTrendPoint, CycleInfo, DiaryEntry } from '../types';
+import type { PhaseMoodStats, MoodTrendPoint, CycleInfo, DiaryEntry, InsightAlert } from '../types';
 import { PHASE_NAMES, PHASE_COLORS, MOOD_EMOJI } from '../types';
+import { formatLocalDate } from '../utils/date';
 
 type RangeKey = '7' | '30' | '90' | 'all';
 
@@ -31,8 +32,8 @@ export default function StatsPage() {
     const start = new Date();
     start.setDate(end.getDate() - opt.days + 1);
     return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
+      start: formatLocalDate(start),
+      end: formatLocalDate(end),
     };
   }, [range]);
 
@@ -43,18 +44,20 @@ export default function StatsPage() {
   async function loadData() {
     try {
       const params = dateRange.start ? { start: dateRange.start, end: dateRange.end } : undefined;
-      const [phases, trendData, cycle, entries, alerts] = await Promise.all([
+      const [phases, trendData, cycle, entries, rangeAlerts] = await Promise.all([
         statsApi.getPhaseStats(params),
         statsApi.getTrend(params),
         cycleApi.get(),
         entriesApi.getAll(params),
-        insightsApi.getAlertDates(),
+        insightsApi.getAlerts(params),
       ]);
       setPhaseStats(phases);
       setTrend(trendData);
       setCycleInfo(cycle);
       setAllEntries(entries);
-      setAlertDates(new Set(alerts));
+      const dates = new Set<string>();
+      rangeAlerts.forEach(a => a.affectedDates.forEach(d => dates.add(d)));
+      setAlertDates(dates);
     } catch (e) {
       console.error(e);
     }
