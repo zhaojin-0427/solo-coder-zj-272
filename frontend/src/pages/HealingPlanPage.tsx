@@ -174,7 +174,10 @@ export default function HealingPlanPage() {
       } else {
         await healingApi.updateAction(actionId, { status, completedAt: undefined });
       }
-      if (selectedPlan) await selectPlan(selectedPlan.id);
+      if (selectedPlan) {
+        await selectPlan(selectedPlan.id);
+        setPlans(await healingApi.getPlans());
+      }
     } catch (e) {
       console.error('Status change error:', e);
     }
@@ -203,6 +206,24 @@ export default function HealingPlanPage() {
     }
   }
 
+  async function handleAddSuggestionToPlan(s: HealingSuggestion) {
+    if (!selectedPlan) return;
+    try {
+      await healingApi.createAction(selectedPlan.id, {
+        title: s.title,
+        description: s.description,
+        category: s.category,
+        priority: s.priority,
+        status: 'pending',
+        reminderDate: today,
+      });
+      await selectPlan(selectedPlan.id);
+      setPlans(await healingApi.getPlans());
+    } catch (e) {
+      console.error('Add suggestion to plan error:', e);
+    }
+  }
+
   async function handleAddQuickAction(category: HealingActionCategory) {
     if (!selectedPlan) return;
     const defaultTitles: Record<HealingActionCategory, string> = {
@@ -225,6 +246,7 @@ export default function HealingPlanPage() {
         reminderDate: today,
       });
       await selectPlan(selectedPlan.id);
+      setPlans(await healingApi.getPlans());
     } catch (e) {
       console.error('Add quick action error:', e);
     }
@@ -560,14 +582,7 @@ export default function HealingPlanPage() {
                   <button
                     className="btn btn-secondary"
                     style={{ marginTop: 10, padding: '8px 16px', fontSize: '0.85em' }}
-                    onClick={() => healingApi.createAction(selectedPlan.id, {
-                      title: s.title,
-                      description: s.description,
-                      category: s.category,
-                      priority: s.priority,
-                      status: 'pending',
-                      reminderDate: today,
-                    }).then(() => selectPlan(selectedPlan.id))}
+                    onClick={() => handleAddSuggestionToPlan(s)}
                   >
                     ➕ 添加到「{selectedPlan.title}」
                   </button>

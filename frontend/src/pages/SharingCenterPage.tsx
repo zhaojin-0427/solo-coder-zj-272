@@ -709,7 +709,6 @@ export default function SharingCenterPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {selectedSpace.entries.map((entry, idx) => {
                       const fullEntry = entry as Partial<DiaryEntry> & { id?: string; date: string };
-                      const privateNote = fullEntry.id ? selectedSpace.privateNotes[fullEntry.id] : undefined;
                       return (
                         <div key={idx} className="entry-preview">
                           <div className="entry-preview-date">📅 {fullEntry.date}</div>
@@ -741,19 +740,6 @@ export default function SharingCenterPage() {
                           {fullEntry.isSpecialEvent && fullEntry.specialEventTitle && (
                             <div style={{ marginTop: 10 }}>
                               <span className="special-event-badge">🎉 {fullEntry.specialEventTitle}</span>
-                            </div>
-                          )}
-                          {privateNote && (
-                            <div style={{
-                              marginTop: 12,
-                              padding: 10,
-                              borderRadius: 10,
-                              background: 'rgba(255,183,77,0.12)',
-                              border: '1px dashed rgba(255,183,77,0.4)',
-                              fontSize: '0.85em',
-                              color: '#f57c00',
-                            }}>
-                              🔒 私密备注（仅自己可见）：{privateNote}
                             </div>
                           )}
                         </div>
