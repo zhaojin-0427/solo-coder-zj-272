@@ -5,6 +5,7 @@ import entriesRouter from './routes/entries';
 import statsRouter from './routes/stats';
 import cycleRouter from './routes/cycle';
 import uploadRouter from './routes/upload';
+import insightsRouter from './routes/insights';
 
 const app = express();
 const PORT = 9102;
@@ -22,6 +23,7 @@ app.use('/api/entries', entriesRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/cycle', cycleRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/insights', insightsRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 后端服务已启动: http://localhost:${PORT}`);
@@ -36,4 +38,11 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/cycle`);
   console.log(`   PUT  /api/cycle`);
   console.log(`   POST /api/upload`);
+  console.log(`   GET  /api/insights/rules`);
+  console.log(`   PUT  /api/insights/rules`);
+  console.log(`   GET  /api/insights/alerts`);
+  console.log(`   GET  /api/insights/alerts/dates`);
+  console.log(`   POST /api/insights/alerts/refresh`);
+  console.log(`   GET  /api/insights/summary`);
+  console.log(`   POST /api/insights/analyze`);
 });

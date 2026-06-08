@@ -52,6 +52,68 @@ export interface MoodTrendPoint {
   cyclePhase?: CyclePhase;
 }
 
+export type InsightRuleType =
+  | 'consecutive_low_mood'
+  | 'luteal_mood_decline'
+  | 'premenstrual_keyword_spike'
+  | 'post_event_mood_drop';
+
+export type InsightSeverity = 'info' | 'warning' | 'alert';
+
+export interface InsightRuleConfig {
+  type: InsightRuleType;
+  enabled: boolean;
+  name: string;
+  description: string;
+  thresholds: Record<string, number>;
+}
+
+export interface InsightAlert {
+  id: string;
+  type: InsightRuleType;
+  severity: InsightSeverity;
+  title: string;
+  description: string;
+  date: string;
+  startDate?: string;
+  endDate?: string;
+  affectedDates: string[];
+  details: Record<string, any>;
+  ruleSnapshot: InsightRuleConfig;
+  createdAt: string;
+}
+
+export interface InsightSummary {
+  totalAlerts: number;
+  alertsBySeverity: Record<InsightSeverity, number>;
+  alertsByType: Record<InsightRuleType, number>;
+  recentAlerts: InsightAlert[];
+  periodOverview: {
+    avgMood: number;
+    moodTrend: 'rising' | 'falling' | 'stable';
+    mostFrequentPhase: CyclePhase | null;
+  };
+}
+
+export const INSIGHT_RULE_LABELS: Record<InsightRuleType, string> = {
+  consecutive_low_mood: '连续情绪低落',
+  luteal_mood_decline: '黄体期情绪下滑',
+  premenstrual_keyword_spike: '经期前关键词激增',
+  post_event_mood_drop: '事件后情绪回落',
+};
+
+export const INSIGHT_SEVERITY_LABELS: Record<InsightSeverity, string> = {
+  info: '提示',
+  warning: '注意',
+  alert: '警告',
+};
+
+export const INSIGHT_SEVERITY_COLORS: Record<InsightSeverity, string> = {
+  info: '#64B5F6',
+  warning: '#FFB74D',
+  alert: '#E57373',
+};
+
 export const PHASE_NAMES: Record<CyclePhase, string> = {
   menstrual: '月经期',
   follicular: '卵泡期',

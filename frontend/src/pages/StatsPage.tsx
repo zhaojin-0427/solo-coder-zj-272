@@ -3,7 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell, Legend, ReferenceLine
 } from 'recharts';
-import { statsApi, cycleApi, entriesApi } from '../api';
+import { statsApi, cycleApi, entriesApi, insightsApi } from '../api';
 import type { PhaseMoodStats, MoodTrendPoint, CycleInfo, DiaryEntry } from '../types';
 import { PHASE_NAMES, PHASE_COLORS, MOOD_EMOJI } from '../types';
 
@@ -22,6 +22,7 @@ export default function StatsPage() {
   const [trend, setTrend] = useState<MoodTrendPoint[]>([]);
   const [cycleInfo, setCycleInfo] = useState<CycleInfo | null>(null);
   const [allEntries, setAllEntries] = useState<DiaryEntry[]>([]);
+  const [alertDates, setAlertDates] = useState<Set<string>>(new Set());
 
   const dateRange = useMemo(() => {
     const opt = RANGE_OPTIONS.find(o => o.key === range)!;
@@ -42,16 +43,18 @@ export default function StatsPage() {
   async function loadData() {
     try {
       const params = dateRange.start ? { start: dateRange.start, end: dateRange.end } : undefined;
-      const [phases, trendData, cycle, entries] = await Promise.all([
+      const [phases, trendData, cycle, entries, alerts] = await Promise.all([
         statsApi.getPhaseStats(params),
         statsApi.getTrend(params),
         cycleApi.get(),
         entriesApi.getAll(params),
+        insightsApi.getAlertDates(),
       ]);
       setPhaseStats(phases);
       setTrend(trendData);
       setCycleInfo(cycle);
       setAllEntries(entries);
+      setAlertDates(new Set(alerts));
     } catch (e) {
       console.error(e);
     }
@@ -63,8 +66,9 @@ export default function StatsPage() {
       displayDate: p.date.slice(5),
       phaseColor: p.cyclePhase ? PHASE_COLORS[p.cyclePhase] : '#ccc',
       phaseName: p.cyclePhase ? PHASE_NAMES[p.cyclePhase] : '',
+      hasAlert: alertDates.has(p.date),
     }));
-  }, [trend]);
+  }, [trend, alertDates]);
 
   const overallAvg = useMemo(() => {
     if (allEntries.length === 0) return 0;
@@ -120,6 +124,13 @@ export default function StatsPage() {
             <div className="stat-sub">{MOOD_EMOJI[Math.min(Math.max(Math.round(overallAvg), 1), 10)]}</div>
           </div>
           <div className="stat-card">
+            <div className="stat-label">预警天数</div>
+            <div className="stat-value" style={{ color: alertDates.size > 0 ? '#E57373' : undefined, background: alertDates.size > 0 ? 'none' : undefined, WebkitTextFillColor: alertDates.size > 0 ? '#E57373' : undefined }}>
+              {alertDates.size}
+            </div>
+            <div className="stat-sub">🔔 需关注</div>
+          </div>
+          <div className="stat-card">
             <div className="stat-label">周期长度</div>
             <div className="stat-value">{cycleInfo?.cycleLength || 28}</div>
             <div className="stat-sub">天</div>
@@ -171,6 +182,7 @@ export default function StatsPage() {
                         }}>
                           <div style={{ color: '#4a2c3d', fontWeight: 600, marginBottom: 6 }}>
                             📅 {d.date}
+                            {d.hasAlert && <span style={{ marginLeft: 8 }}>🔔 预警</span>}
                           </div>
                           <div style={{ color: '#ff6b9d', fontSize: '1.2em', marginBottom: 6 }}>
                             {MOOD_EMOJI[Math.min(Math.max(d.moodScore, 1), 10)]} {d.moodScore}/10
@@ -201,16 +213,29 @@ export default function StatsPage() {
                   strokeWidth={3}
                   dot={(props: any) => {
                     const { cx, cy, payload } = props;
+                    const isAlert = payload.hasAlert;
                     return (
-                      <circle
-                        key={payload.date}
-                        cx={cx}
-                        cy={cy}
-                        r={chartData.length > 30 ? 3 : 5}
-                        fill={payload.color}
-                        stroke="white"
-                        strokeWidth={2}
-                      />
+                      <g key={payload.date}>
+                        {isAlert && (
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={chartData.length > 30 ? 9 : 12}
+                            fill="none"
+                            stroke="#E57373"
+                            strokeWidth={2}
+                            strokeDasharray="3 3"
+                          />
+                        )}
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={chartData.length > 30 ? 3 : 5}
+                          fill={isAlert ? '#E57373' : payload.color}
+                          stroke="white"
+                          strokeWidth={2}
+                        />
+                      </g>
                     );
                   }}
                   activeDot={{ r: 8, stroke: '#ff6b9d', strokeWidth: 2, fill: 'white' }}

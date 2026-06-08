@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { entriesApi, cycleApi } from '../api';
+import { entriesApi, cycleApi, insightsApi } from '../api';
 import type { DiaryEntry, CycleInfo } from '../types';
 import { MOOD_EMOJI, PHASE_NAMES, PHASE_COLORS, STICKER_EMOJI } from '../types';
 import { formatLocalDate, todayStr } from '../utils/date';
@@ -14,6 +14,7 @@ export default function CalendarPage() {
   const [cycleInfo, setCycleInfo] = useState<CycleInfo | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<DiaryEntry | null>(null);
+  const [alertDates, setAlertDates] = useState<Set<string>>(new Set());
 
   const { start, end } = useMemo(() => {
     const s = new Date(year, month, 1, 12, 0, 0);
@@ -30,12 +31,14 @@ export default function CalendarPage() {
 
   async function loadData() {
     try {
-      const [list, cycle] = await Promise.all([
+      const [list, cycle, alerts] = await Promise.all([
         entriesApi.getAll({ start, end }),
         cycleApi.get(),
+        insightsApi.getAlertDates(),
       ]);
       setEntries(list);
       setCycleInfo(cycle);
+      setAlertDates(new Set(alerts));
     } catch (e) {
       console.error(e);
     }
@@ -132,10 +135,11 @@ export default function CalendarPage() {
               const entry = entriesByDate[dateStr];
               const isToday = dateStr === today;
               const isSelected = dateStr === selectedDate;
+              const hasAlert = alertDates.has(dateStr);
               return (
                 <div
                   key={dateStr}
-                  className={`calendar-day ${!inMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
+                  className={`calendar-day ${!inMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${hasAlert ? 'has-alert' : ''}`}
                   onClick={() => inMonth && setSelectedDate(dateStr)}
                 >
                   <span className="day-number">{date.getDate()}</span>
@@ -153,6 +157,9 @@ export default function CalendarPage() {
                   )}
                   {entry?.isSpecialEvent && (
                     <span style={{ position: 'absolute', top: 2, right: 4, fontSize: '0.7em' }}>⭐</span>
+                  )}
+                  {hasAlert && !entry?.isSpecialEvent && (
+                    <span style={{ position: 'absolute', top: 2, right: 4, fontSize: '0.7em' }}>🔔</span>
                   )}
                 </div>
               );
@@ -175,6 +182,10 @@ export default function CalendarPage() {
             <div className="legend-item">
               <span className="legend-dot" style={{ background: PHASE_COLORS.luteal }} />
               {PHASE_NAMES.luteal}
+            </div>
+            <div className="legend-item">
+              <span style={{ fontSize: '0.9em' }}>🔔</span>
+              预警日期
             </div>
           </div>
         </div>

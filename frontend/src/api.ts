@@ -1,5 +1,14 @@
 import axios from 'axios';
-import type { DiaryEntry, CycleInfo, PhaseMoodStats, YearlyReview, MoodTrendPoint } from './types';
+import type {
+  DiaryEntry,
+  CycleInfo,
+  PhaseMoodStats,
+  YearlyReview,
+  MoodTrendPoint,
+  InsightRuleConfig,
+  InsightAlert,
+  InsightSummary,
+} from './types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -46,4 +55,29 @@ export const uploadApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data);
   },
+};
+
+export const insightsApi = {
+  getRules: () =>
+    api.get<InsightRuleConfig[]>('/insights/rules').then(r => r.data),
+  updateRules: (rules: InsightRuleConfig[]) =>
+    api.put<InsightRuleConfig[]>('/insights/rules', rules).then(r => r.data),
+  updateRule: (type: string, updates: Partial<InsightRuleConfig>) =>
+    api.put<InsightRuleConfig>(`/insights/rules/${type}`, updates).then(r => r.data),
+  getAlerts: (params?: {
+    start?: string;
+    end?: string;
+    type?: string;
+    severity?: string;
+    limit?: number;
+  }) =>
+    api.get<InsightAlert[]>('/insights/alerts', { params }).then(r => r.data),
+  getAlertDates: () =>
+    api.get<string[]>('/insights/alerts/dates').then(r => r.data),
+  refreshAlerts: () =>
+    api.post<{ refreshed: number; alerts: InsightAlert[] }>('/insights/alerts/refresh').then(r => r.data),
+  getSummary: (params?: { start?: string; end?: string }) =>
+    api.get<InsightSummary>('/insights/summary', { params }).then(r => r.data),
+  analyze: () =>
+    api.post<{ alerts: InsightAlert[]; summary: InsightSummary }>('/insights/analyze').then(r => r.data),
 };

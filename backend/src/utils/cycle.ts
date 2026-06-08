@@ -1,4 +1,4 @@
-import { CyclePhase, CycleInfo } from './types';
+import { CyclePhase, CycleInfo } from '../types';
 
 export const PHASE_NAMES: Record<CyclePhase, string> = {
   menstrual: '月经期',

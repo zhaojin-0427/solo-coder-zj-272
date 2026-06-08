@@ -1,11 +1,19 @@
 import fs from 'fs';
 import path from 'path';
-import { DiaryEntry, CycleInfo } from './types';
+import {
+  DiaryEntry,
+  CycleInfo,
+  InsightRuleConfig,
+  InsightAlert,
+  DEFAULT_INSIGHT_RULES,
+} from './types';
 import { getDefaultCycleInfo } from './utils/cycle';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const ENTRIES_FILE = path.join(DATA_DIR, 'entries.json');
 const CYCLE_FILE = path.join(DATA_DIR, 'cycle.json');
+const INSIGHT_RULES_FILE = path.join(DATA_DIR, 'insight-rules.json');
+const INSIGHT_ALERTS_FILE = path.join(DATA_DIR, 'insight-alerts.json');
 
 function ensureDataDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
@@ -200,4 +208,113 @@ export function updateCycleInfo(info: Partial<CycleInfo>): CycleInfo {
   const updated = { ...current, ...info };
   writeJSONFile(CYCLE_FILE, updated);
   return updated;
+}
+
+function readInsightRules(): InsightRuleConfig[] {
+  const defaultValue = { rules: DEFAULT_INSIGHT_RULES };
+  const data = readJSONFile<{ rules: InsightRuleConfig[] }>(INSIGHT_RULES_FILE, defaultValue);
+  if (!fs.existsSync(INSIGHT_RULES_FILE)) {
+    writeJSONFile(INSIGHT_RULES_FILE, data);
+  }
+  return data.rules;
+}
+
+function writeInsightRules(rules: InsightRuleConfig[]): void {
+  writeJSONFile(INSIGHT_RULES_FILE, { rules });
+}
+
+export function getInsightRules(): InsightRuleConfig[] {
+  return readInsightRules();
+}
+
+export function updateInsightRules(rules: InsightRuleConfig[]): InsightRuleConfig[] {
+  const current = readInsightRules();
+  const merged = current.map(rule => {
+    const updated = rules.find(r => r.type === rule.type);
+    return updated ? { ...rule, ...updated } : rule;
+  });
+  const newRules = rules.filter(r => !current.find(c => c.type === r.type));
+  const final = [...merged, ...newRules];
+  writeInsightRules(final);
+  return final;
+}
+
+export function updateInsightRule(type: string, updates: Partial<InsightRuleConfig>): InsightRuleConfig | undefined {
+  const rules = readInsightRules();
+  const idx = rules.findIndex(r => r.type === type);
+  if (idx >= 0) {
+    rules[idx] = { ...rules[idx], ...updates };
+    writeInsightRules(rules);
+    return rules[idx];
+  }
+  return undefined;
+}
+
+function readInsightAlerts(): InsightAlert[] {
+  const defaultValue = { alerts: [] as InsightAlert[] };
+  const data = readJSONFile<{ alerts: InsightAlert[] }>(INSIGHT_ALERTS_FILE, defaultValue);
+  if (!fs.existsSync(INSIGHT_ALERTS_FILE)) {
+    writeJSONFile(INSIGHT_ALERTS_FILE, data);
+  }
+  return data.alerts;
+}
+
+function writeInsightAlerts(alerts: InsightAlert[]): void {
+  writeJSONFile(INSIGHT_ALERTS_FILE, { alerts });
+}
+
+export function getInsightAlerts(params?: {
+  start?: string;
+  end?: string;
+  type?: string;
+  severity?: string;
+  limit?: number;
+}): InsightAlert[] {
+  let alerts = readInsightAlerts();
+  if (params?.start) {
+    alerts = alerts.filter(a => a.date >= params.start!);
+  }
+  if (params?.end) {
+    alerts = alerts.filter(a => a.date <= params.end!);
+  }
+  if (params?.type) {
+    alerts = alerts.filter(a => a.type === params.type);
+  }
+  if (params?.severity) {
+    alerts = alerts.filter(a => a.severity === params.severity);
+  }
+  alerts = alerts.sort((a, b) => b.date.localeCompare(a.date));
+  if (params?.limit) {
+    alerts = alerts.slice(0, params.limit);
+  }
+  return alerts;
+}
+
+export function getAlertDates(): string[] {
+  const alerts = readInsightAlerts();
+  const dates = new Set<string>();
+  alerts.forEach(a => {
+    a.affectedDates.forEach(d => dates.add(d));
+  });
+  return Array.from(dates).sort();
+}
+
+export function saveInsightAlerts(alerts: InsightAlert[]): void {
+  writeInsightAlerts(alerts);
+}
+
+export function clearInsightAlerts(): void {
+  writeInsightAlerts([]);
+}
+
+export function createInsightAlert(alert: Omit<InsightAlert, 'id' | 'createdAt'>): InsightAlert {
+  const alerts = readInsightAlerts();
+  const newAlert: InsightAlert = {
+    ...alert,
+    id: `alert_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+  };
+  alerts.push(newAlert);
+  writeInsightAlerts(alerts);
+  return newAlert;
 }

@@ -461,6 +461,14 @@ label {
   filter: brightness(1.2);
 }
 
+.calendar-day.has-alert {
+  box-shadow: 0 0 0 2px rgba(229, 115, 115, 0.5);
+}
+
+.calendar-day.selected.has-alert {
+  box-shadow: 0 4px 15px rgba(255, 107, 157, 0.4), 0 0 0 2px rgba(229, 115, 115, 0.8);
+}
+
 .day-number {
   font-size: 0.9em;
   color: #4a2c3d;

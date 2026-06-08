@@ -5,11 +5,13 @@ import CalendarPage from './pages/CalendarPage';
 import StatsPage from './pages/StatsPage';
 import WordCloudPage from './pages/WordCloudPage';
 import YearlyReviewPage from './pages/YearlyReviewPage';
+import InsightsPage from './pages/InsightsPage';
 
 const navItems = [
   { key: 'daily', label: '每日记录', path: '/' },
   { key: 'calendar', label: '月历视图', path: '/calendar' },
   { key: 'stats', label: '周期统计', path: '/stats' },
+  { key: 'insights', label: '🔮 洞察预警', path: '/insights' },
   { key: 'wordcloud', label: '心情词云', path: '/wordcloud' },
   { key: 'yearly', label: '年度回顾', path: '/yearly' },
 ];
@@ -42,6 +44,7 @@ export default function App() {
           <Route path="/" element={<DailyRecordPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/insights" element={<InsightsPage />} />
           <Route path="/wordcloud" element={<WordCloudPage />} />
           <Route path="/yearly" element={<YearlyReviewPage />} />
         </Routes>
